@@ -5,14 +5,13 @@ from __future__ import with_statement
 __author__ = 'Gang.Wang'
 
 import os, sys
-import bluetooth
+from bluetooth import *
 
-#nearby_devices = bluetooth.discover_devices()
+nearby_devices = discover_devices()
 
-#for bd_addr in nearby_devices:
-    #print "%s  %s" % (bd_addr, bluetooth.lookup_name(bd_addr))
+for bd_addr in nearby_devices:
+    print "%s - %s" % (lookup_name(bd_addr), bd_addr)
 
-devices = bluetooth.find_service(name = "Nintendo RVL-CNT-01")
-
-for service_providers in devices:
-    print service_providers
+devices = find_service()
+for providers in devices:
+    print providers
