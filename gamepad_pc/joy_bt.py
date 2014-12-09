@@ -87,7 +87,9 @@ while done == False:
         else:
             sign = '\x00'
 
-        nxt_motor_data = nxt_data_prefix + fb + '\x00' + sign + '\x00' + to_bytes([power_level]) + '\x00'
+        nxt_motor_data = nxt_data_prefix + fb + '\x00' + \
+                         sign + '\x00' + \
+                         to_bytes([power_level]) + '\x00'
         ser.write(nxt_motor_data)
 
     steering_raw = joystick.get_axis(0)
@@ -100,8 +102,9 @@ while done == False:
         else:
             sign = '\x00'
 
-        nxt_motor_data = nxt_data_prefix + lr + '\x00' + sign + '\x00' + \
-                        to_bytes([steering]) + '\x00'
+        nxt_motor_data = nxt_data_prefix + lr + '\x00' + \
+                         sign + '\x00' + \
+                         to_bytes([steering]) + '\x00'
         ser.write(nxt_motor_data)
 
     axes = joystick.get_numaxes()
