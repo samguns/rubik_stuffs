@@ -1,0 +1,19 @@
+Debug/*
+Release/*
+Debug Win32/*
+Debug Win64/*
+Release Win32/*
+Release Win64/*
+*.exp
+*.ilk
+*.lib
+*.suo
+*.ncb
+*.suo
+*.dll
+*.pdb
+*.dll
+*.exe
+*.a
+*.def
+*.depend

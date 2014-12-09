@@ -6,6 +6,6 @@ __author__ = 'Gang.Wang'
 
 from ctypes import cdll
 
-hid_lib = cdll.LoadLibrary('./libhidapi.a')
+hid_lib = cdll.LoadLibrary('./hidapi.dll')
 
-hib_lib.hid_exit()
+hid_lib.hid_exit()
