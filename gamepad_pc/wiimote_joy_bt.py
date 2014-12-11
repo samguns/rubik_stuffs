@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals
-from __future__ import with_statement
-#from __future__ import print_function
 
 __author__ = 'Gang.Wang'
 
@@ -167,7 +164,6 @@ class wiimote:
                 self.wiimote_calibration_yg, \
                 self.wiimote_calibration_zg
 
-nxt_data_prefix = '\x0a\x00\x80\x09\x00\x06'
 turn_left = 1 << 0
 turn_right = 1 << 1
 turn_forward = 1 << 0
@@ -182,9 +178,9 @@ def main_process(wii, bt_com):
 
         # We only take the data when 'A' button is pressed
         if (core_button_byte2 & BB_BYTE2_A) != BB_BYTE2_A:
-            nxt_motor_cmd = nxt_data_prefix + '\x00\x00\x00\x00\x00\x00'
+            nxt_motor_stop_cmd = create_string_buffer('\x0a\x00\x80\x09\x00\x06', 12)
             try:
-                bt_com.write(nxt_motor_cmd)
+                bt_com.write(nxt_motor_stop_cmd)
             except:
                 pass
 
@@ -223,16 +219,18 @@ def main_process(wii, bt_com):
 
         direction_int = (X_BYTE_INT << 4) | (Y_BYTE_INT)
 
-        nxt_motor_data = nxt_data_prefix + \
+        nxt_data_prefix = create_string_buffer('\x0a\x00\x80\x09')
+        nxt_motor_data = nxt_data_prefix.raw + '\x06' + \
                     to_bytes([abs(actual_x)]) + '\x00' + \
                     to_bytes([abs(actual_y)]) + '\x00' + \
                     to_bytes([direction_int]) + '\x00'
+        print repr(nxt_motor_data)
         try:
             bt_com.write(nxt_motor_data)
         except:
             pass
-        #print("X:%d Y:%d" % (actual_x, actual_y))
-        #print("0x%x  " % direction_int)
+        print("X:%d Y:%d" % (actual_x, actual_y))
+        print("0x%x  " % direction_int)
         #actual_z = float((float(raw_z) - z0) / (float(zg) - z0))
 
 
