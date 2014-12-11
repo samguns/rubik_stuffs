@@ -41,27 +41,6 @@ int main(int argc, char* argv[])
 	UNREFERENCED_PARAMETER(argv);
 #endif
 
-	struct hid_device_info *devs, *cur_dev;
-
-	devs = hid_enumerate(0x0, 0x0);
-	cur_dev = devs;
-	while (cur_dev) {
-		printf("Device Found\n  type: %04hx %04hx\n  path: %s\n  serial_number: %ls", cur_dev->vendor_id, cur_dev->product_id, cur_dev->path, cur_dev->serial_number);
-		printf("\n");
-		printf("  Manufacturer: %ls\n", cur_dev->manufacturer_string);
-		printf("  Product:      %ls\n", cur_dev->product_string);
-		printf("  Release:      %hx\n", cur_dev->release_number);
-		printf("  Interface:    %d\n",  cur_dev->interface_number);
-		printf("\n");
-		cur_dev = cur_dev->next;
-	}
-	hid_free_enumeration(devs);
-
-	// Set up the command buffer.
-	memset(buf,0x00,sizeof(buf));
-	buf[0] = 0x01;
-	buf[1] = 0x81;
-
 
 	// Open the device using the VID, PID,
 	// and optionally the Serial number.
@@ -108,39 +87,11 @@ int main(int argc, char* argv[])
 	// data here, but execution should not block.
 	res = hid_read(handle, buf, 17);
 
-	// Send a Feature Report to the device
-	buf[0] = 0x2;
-	buf[1] = 0xa0;
-	buf[2] = 0x0a;
-	buf[3] = 0x00;
-	buf[4] = 0x00;
-	res = hid_send_feature_report(handle, buf, 17);
-	if (res < 0) {
-		printf("Unable to send a feature report.\n");
-	}
-
-	memset(buf,0,sizeof(buf));
-
-	// Read a Feature Report from the device
-	buf[0] = 0x2;
-	res = hid_get_feature_report(handle, buf, sizeof(buf));
-	if (res < 0) {
-		printf("Unable to get a feature report.\n");
-		printf("%ls", hid_error(handle));
-	}
-	else {
-		// Print out the returned buffer.
-		printf("Feature Report\n   ");
-		for (i = 0; i < res; i++)
-			printf("%02hhx ", buf[i]);
-		printf("\n");
-	}
-
 	memset(buf,0,sizeof(buf));
 
 	// Toggle LED (cmd 0x80). The first byte is the report number (0x1).
 	buf[0] = 0x11;
-	buf[1] = 0x80;
+	buf[1] = 0x20;
 	res = hid_write_report(handle, buf, 2);
 	if (res < 0) {
 		printf("Unable to write()\n");
@@ -148,10 +99,9 @@ int main(int argc, char* argv[])
 	}
 
 	// Request state (cmd 0x81). The first byte is the report number (0x1).
-	buf[0] = 0x12;
+	buf[0] = 0x15;
 	buf[1] = 0x00;
-	buf[2] = 0x33;
-	res = hid_write_report(handle, buf, 3);
+	res = hid_write_report(handle, buf, 2);
 	if (res < 0)
 		printf("Unable to write() (2) %ls\n", hid_error(handle));
 
@@ -177,6 +127,96 @@ int main(int argc, char* argv[])
 	for (i = 0; i < res; i++)
 		printf("%02hhx ", buf[i]);
 	printf("\n");
+
+#if 0
+#endif // 0
+    memset(buf,0,sizeof(buf));
+	buf[0] = 0x16;
+	buf[1] = 0x04;
+	buf[2] = 0xa4;
+	buf[3] = 0x00;
+	buf[4] = 0xf0;
+	buf[5] = 0x01;
+	buf[6] = 0x55;
+	res = hid_write_report(handle, buf, 22);
+	if (res < 0)
+		printf("Unable to write 0x55 to 0x(4)A400F0 %ls\n", hid_error(handle));
+
+	res = 0;
+	while (res == 0) {
+		res = hid_read(handle, buf, sizeof(buf));
+		if (res == 0)
+			printf("waiting...\n");
+		if (res < 0)
+			printf("Unable to read()\n");
+		#ifdef WIN32
+		Sleep(500);
+		#else
+		usleep(500*1000);
+		#endif
+	}
+
+    memset(buf,0,sizeof(buf));
+	buf[0] = 0x16;
+	buf[1] = 0x04;
+	buf[2] = 0xa4;
+	buf[3] = 0x00;
+	buf[4] = 0xfb;
+	buf[5] = 0x01;
+	buf[6] = 0x00;
+	res = hid_write_report(handle, buf, 22);
+	if (res < 0)
+		printf("Unable to write 0x00 to 0x(4)A400FB %ls\n", hid_error(handle));
+
+	res = 0;
+	while (res == 0) {
+		res = hid_read(handle, buf, sizeof(buf));
+		if (res == 0)
+			printf("waiting...\n");
+		if (res < 0)
+			printf("Unable to read()\n");
+		#ifdef WIN32
+		Sleep(500);
+		#else
+		usleep(500*1000);
+		#endif
+	}
+	// Read requested state. hid_read() has been set to be
+	memset(buf,0,sizeof(buf));
+	buf[0] = 0x17;
+	buf[1] = 0x04;
+	buf[2] = 0xa4;
+	buf[3] = 0x00;
+	buf[4] = 0xfa;
+	buf[5] = 0x00;
+	buf[6] = 0x06;
+	res = hid_write_report(handle, buf, 22);
+	if (res < 0)
+		printf("Unable to write read_register %ls\n", hid_error(handle));
+	// non-blocking by the call to hid_set_nonblocking() above.
+	// This loop demonstrates the non-blocking nature of hid_read().
+	res = 0;
+	while (res == 0) {
+		res = hid_read(handle, buf, sizeof(buf));
+		if (res == 0)
+			printf("waiting...\n");
+		if (res < 0)
+			printf("Unable to read()\n");
+		#ifdef WIN32
+		Sleep(500);
+		#else
+		usleep(500*1000);
+		#endif
+	}
+
+	printf("Data read:\n   ");
+	// Print out the returned buffer.
+	for (i = 0; i < res; i++)
+		printf("%02hhx ", buf[i]);
+	printf("\n");
+	printf("\n");
+#if 0
+#endif // 0
 
 	hid_close(handle);
 

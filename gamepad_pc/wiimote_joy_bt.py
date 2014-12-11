@@ -159,12 +159,97 @@ class wiimote:
     def get_read_buffer(self):
         return self.buffer
 
+    def get_calibration_info(self):
+        return self.wiimote_calibration_x0, \
+                self.wiimote_calibration_y0, \
+                self.wiimote_calibration_z0, \
+                self.wiimote_calibration_xg, \
+                self.wiimote_calibration_yg, \
+                self.wiimote_calibration_zg
+
 nxt_data_prefix = '\x0a\x00\x80\x09\x00\x06'
-def main_process(wii):
-    while  wii.read():
+turn_left = 1 << 0
+turn_right = 1 << 1
+turn_forward = 1 << 0
+turn_backward = 1 << 1
+
+def main_process(wii, bt_com):
+    while wii.read():
         wii_data = wii.get_read_buffer()
-        core_button_byte1 = int(wii_data.raw[1].encode("hex"), 16)
-        #core_button_byte2 = int(wii_data.raw[2].encode("hex"), 16)
+        x0, y0, z0, xg, yg, zg = wii.get_calibration_info()
+        #core_button_byte1 = int(wii_data.raw[1].encode("hex"), 16)
+        core_button_byte2 = int(wii_data.raw[2].encode("hex"), 16)
+
+        # We only take the data when 'A' button is pressed
+        if (core_button_byte2 & BB_BYTE2_A) != BB_BYTE2_A:
+            nxt_motor_cmd = nxt_data_prefix + '\x00\x00\x00\x00\x00\x00'
+            try:
+                bt_com.write(nxt_motor_cmd)
+            except:
+                pass
+
+            continue
+
+        raw_x = int(wii_data.raw[3].encode("hex"), 16)
+        raw_y = int(wii_data.raw[4].encode("hex"), 16)
+        #raw_z = int(wii_data.raw[5].encode("hex"), 16)
+
+        x = float((float(raw_x) - x0) / (float(xg) - x0))
+        actual_x = int(x * 100)
+        if (actual_x < -100):
+            actual_x = -100
+        if (actual_x > 100):
+            actual_x = 100
+        y = float((float(raw_y) - y0) / (float(yg) - y0))
+        actual_y = int(y * 100)
+        if (actual_y < -100):
+            actual_y = -100
+        if (actual_y > 100):
+            actual_y = 100
+
+        if (actual_x > 0):
+            X_BYTE_INT = turn_left
+        elif (actual_x < 0):
+            X_BYTE_INT = turn_right
+        else:
+            X_BYTE_INT = 0
+
+        if (actual_y > 0):
+            Y_BYTE_INT = turn_forward
+        elif (actual_y < 0):
+            Y_BYTE_INT = turn_backward
+        else:
+            Y_BYTE_INT = 0
+
+        direction_int = (X_BYTE_INT << 4) | (Y_BYTE_INT)
+
+        nxt_motor_data = nxt_data_prefix + \
+                    to_bytes([abs(actual_x)]) + '\x00' + \
+                    to_bytes([abs(actual_y)]) + '\x00' + \
+                    to_bytes([direction_int]) + '\x00'
+        try:
+            bt_com.write(nxt_motor_data)
+        except:
+            pass
+        #print("X:%d Y:%d" % (actual_x, actual_y))
+        #print("0x%x  " % direction_int)
+        #actual_z = float((float(raw_z) - z0) / (float(zg) - z0))
+
+
+        '''
+        print("raw_x:%d raw_x - x0:%d xg - x0:%d" % \
+                (raw_x, (raw_x - x0), (xg - x0))),
+        print("X: %f %d" % (actual_x, actual_x * 100))
+
+        print("raw_y:%d raw_y - y0:%d yg - y0:%d" % \
+                (raw_y, (raw_y - y0), (yg - y0))),
+        print("Y: %f %d" % (actual_y, actual_y * 100))
+
+        print("raw_z:%d raw_z - z0:%d zg - z0:%d" % \
+                (raw_z, (raw_z - z0), (zg - z0))),
+        print("Z: %f %d" % (actual_z, actual_z * 100))
+        print
+
         if core_button_byte1 & BB_BYTE1_DOWN:
             print ("Down")
         elif core_button_byte1 & BB_BYTE1_LEFT:
@@ -173,6 +258,7 @@ def main_process(wii):
             print "Right"
         elif core_button_byte1 & BB_BYTE1_UP:
             print "Up"
+        '''
 
 
 if __name__ == "__main__":
@@ -193,7 +279,7 @@ if __name__ == "__main__":
             #sys.exit(-1)
 
     try:
-        main_process(wii)
+        main_process(wii, ser)
     except KeyboardInterrupt:
         print "Quit"
 
