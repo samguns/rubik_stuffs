@@ -3,6 +3,7 @@ __author__ = 'sam'
 
 from serial import *
 from ctypes import *
+import argparse
 
 #out_data = '\x0a\x00\x80\x09\x00\x06\x49\x00\x50\x00\x51\x00'
 
@@ -24,3 +25,10 @@ nxt_motor_data.raw[11] = '\x00'
 print repr(nxt_motor_data)
 print nxt_motor_data
 print to_bytes([64])
+
+parser = argparse.ArgumentParser()
+parser.add_argument(metavar='N', default = 0, type = int, \
+                    help = 'The COM port (N) that connected to NXT', \
+                    dest = 'com')
+args = parser.parse_args()
+print("%d" % (args.com -1))

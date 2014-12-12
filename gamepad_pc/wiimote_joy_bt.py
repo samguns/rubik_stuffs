@@ -3,6 +3,7 @@
 __author__ = 'Gang.Wang'
 
 import sys
+import argparse
 from ctypes import *
 from serial import *
 
@@ -260,13 +261,19 @@ def main_process(wii, bt_com):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(metavar='N', default = 0, type = int, \
+                        help = 'The COM port (N) that connected to NXT', \
+                        dest = 'com')
+    args = parser.parse_args()
+
     wii = wiimote()
     ret = wii.open()
     if (0 != ret):
         sys.exit(-1)
 
     ser = Serial()
-    ser.port = 3
+    ser.port = (args.com - 1)
     ser.timeout = 300
     if False == ser.isOpen():
         try:
