@@ -279,9 +279,9 @@ if __name__ == "__main__":
         try:
             ser.open()
         except:
-            print "No COM4"
-            #wii.close()
-            #sys.exit(-1)
+            print("Can not open COM%d" % (args.com - 1))
+            wii.close()
+            sys.exit(-1)
 
     try:
         main_process(wii, ser)
