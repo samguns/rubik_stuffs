@@ -45,14 +45,14 @@ task main()
     {
     	if (direction_x & LEFT)
     	{
-    		if (nMotorEncoder[motorA] < -35)
+    		if (nMotorEncoder[motorA] < -20)
     			motor[motorA] = 0;
     		else
     			motor[motorA] = -(x);
     	}
     	else
     	{
-    		if (nMotorEncoder[motorA] > 35)
+    		if (nMotorEncoder[motorA] > 20)
     			motor[motorA] = 0;
     		else
     			motor[motorA] = x;
