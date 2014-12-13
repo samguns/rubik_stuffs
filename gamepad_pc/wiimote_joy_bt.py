@@ -225,13 +225,13 @@ def main_process(wii, bt_com):
                     to_bytes([abs(actual_x)]) + '\x00' + \
                     to_bytes([abs(actual_y)]) + '\x00' + \
                     to_bytes([direction_int]) + '\x00'
-        print repr(nxt_motor_data)
+        #print repr(nxt_motor_data)
         try:
             bt_com.write(nxt_motor_data)
         except:
             pass
-        print("X:%d Y:%d" % (actual_x, actual_y))
-        print("0x%x  " % direction_int)
+        #print("X:%d Y:%d" % (actual_x, actual_y))
+        #print("0x%x  " % direction_int)
         #actual_z = float((float(raw_z) - z0) / (float(zg) - z0))
 
 
@@ -279,7 +279,7 @@ if __name__ == "__main__":
         try:
             ser.open()
         except:
-            print("Can not open COM%d" % (args.com - 1))
+            print("Can not open COM%d" % args.com)
             wii.close()
             sys.exit(-1)
 
