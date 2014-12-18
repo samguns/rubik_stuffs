@@ -1,6 +1,7 @@
 #include <SDL.h>
 #include <SDL_thread.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #ifndef bool
@@ -301,8 +302,24 @@ static int motor_task(void *ptr)
 
 int main(int argc, char *argv[])
 {
+    SDL_Window *window = NULL;
     unsigned char cube[NFACE * 8];
     SDL_Event e;
+
+    /* Initialize SDL (Note: video is required to start event loop) */
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't initialize SDL: %s\n", SDL_GetError());
+        exit(1);
+    }
+
+    /* Create a window to display joystick axis position */
+    window = SDL_CreateWindow("Mindcuber Test", SDL_WINDOWPOS_CENTERED,
+                              SDL_WINDOWPOS_CENTERED, 640,
+                              480, 0);
+    if (window == NULL) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create window: %s\n", SDL_GetError());
+        return SDL_FALSE;
+    }
 
     motor_mtx = SDL_CreateMutex();
 
@@ -322,6 +339,9 @@ int main(int argc, char *argv[])
     SDL_DetachThread(threadID);
     SDL_DestroyMutex(motor_mtx);
     motor_mtx = NULL;
+
+    SDL_DestroyWindow(window);
+    SDL_QuitSubSystem(SDL_INIT_VIDEO);
 
     return 0;
 }
