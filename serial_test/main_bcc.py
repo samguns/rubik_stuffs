@@ -4,8 +4,8 @@ __author__ = 'sam'
 from serial import *
 
 ser = Serial()
-ser.port = 2
-ser.timeout = 2
+ser.port = 3
+ser.timeout = 20
 
 try:
     ser.open()
@@ -13,8 +13,8 @@ except:
     print("Can not open COM3")
 
 while(1):
-    out_data = '\x09\x00\x80\x09\x05\x05\x41\x42\x43\x44\x00'
-    ser.write(out_data)
+    #out_data = '\x09\x00\x80\x09\x05\x05\x41\x42\x43\x44\x00'
+    #ser.write(out_data)
     try:
     #print ("Read %d" % i)
         text = ser.read(1)
@@ -23,12 +23,14 @@ while(1):
             if n:
                 text = text + ser.read(n)
 
-            print("Received %d bytes" % len(text))
+            #print("Received %d bytes" % len(text))
+            print text[6:]
+            '''
+            for recv_bytes in text[6:]:
+                print('%c'%(int(recv_bytes.encode("hex"), 16))),
+                '''
 
-            for recv_bytes in text:
-                print("0x%x  " % (int(recv_bytes.encode("hex"), 16))),
-
-        print "\r\r"
+        #print "\n"
 
     except KeyboardInterrupt:
         print "Quit"

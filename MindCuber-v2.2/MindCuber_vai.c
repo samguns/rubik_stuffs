@@ -1910,7 +1910,7 @@ task main() {
 
   banner();
 #ifdef NXT_8527
-  TextOut(0, LCD_LINE3, "NXT (Orange box)");
+  TextOut(0, LCD_LINE3, "NXT (vai)");
 #else
   TextOut(0, LCD_LINE3, "NXT 2.0");
 #endif
@@ -1929,8 +1929,42 @@ task main() {
 
   init_cube(cube);
 
+  calibrate_tilt();
+  endstop(M_SCAN);
+  scan_away();
+  scan_wait();
+  motors_on();
+
   byte msg_line = LCD_LINE7;
   while (true) {
+    ClearLine(msg_line);
+    TextOut(0*6, msg_line, "Remove cube...");
+    bool cal_white = false;
+    while (!cube_absent()) {
+      if (!cal_white && center_pressed()) {
+        msg_line = LCD_LINE7;
+        banner();
+        TextOut(0*6, LCD_LINE4, "Calibrate white");
+        TextOut(0*6, msg_line, "Remove cube...");
+        cal_white = true;
+      }
+      Wait(1);
+    }
+    cube_detect_off();
+    calibrate_tilt();
+    flash_off();
+
+    ClearLine(msg_line);
+    TextOut(0*6, msg_line, "Insert cube...");
+    while (!cube_present()) {
+      if (left_pressed())
+        move_rel(M_TURN, -T_ADJ);
+      if (right_pressed())
+        move_rel(M_TURN, T_ADJ);
+      Wait(1);
+    }
+    cube_detect_off();
+
     banner();
     TextOut(0*6, LCD_LINE4, "Scanning...");
 
@@ -1938,12 +1972,12 @@ task main() {
 
     bool solved = false;
     pieces_valid = 0;
-    if (0) {
+    if (cal_white) {
       calibrate_white();
     } else {
       msg_line = LCD_LINE2;
       timer_start();
-      for (int tries = 0; !solved && tries < 3; tries ++) {
+      for (int tries = 0; !solved && tries < 1; tries ++) {
         if (scan_solve_cube(cube)) {
           // Apply solution to the cube
           for (int i = 0; i < solve_n; i++) {

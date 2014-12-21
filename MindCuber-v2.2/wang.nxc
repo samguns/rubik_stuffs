@@ -87,7 +87,7 @@ string       logname = "mc.log";
 byte         logh;
 bool         logf = true;
 
-void log(long n) {
+void log_debug(long n) {
   if (!logf)
     Write(logh, ',');
   if (n < 0) {
@@ -115,8 +115,7 @@ void logeol() {
 #define close_log()   CloseFile(logh)
 
 #else
-
-#define log(NUM)
+#define log_debug(NUM)
 #define logeol()
 #define create_log()
 #define close_log()
@@ -791,13 +790,30 @@ void set_rgb(int o, int &rgb[]) {
   sc_s[o]  = s;
   sc_l[o]  = l;
   sc_sl[o] = sl;
-  log(r);
-  log(g);
-  log(b);
-  log(h);
-  log(s);
-  log(l);
-  log(sl);
+  string out, g_str, b_str, h_str, s_str, l_str, sl_str;
+
+  sprintf(out, "r:%d ", r);
+  sprintf(g_str, "g:%d ", g);
+  sprintf(b_str, "b:%d ", b);
+  sprintf(h_str, "h:%d ", h);
+  sprintf(s_str, "s:%d ", s);
+  sprintf(l_str, "l:%d ", l);
+  sprintf(sl_str, "sl:%d", sl);
+  out = StrCat(out, g_str);
+  out = StrCat(out, b_str);
+  out = StrCat(out, h_str);
+  out = StrCat(out, s_str);
+  out = StrCat(out, l_str);
+  out = StrCat(out, sl_str);
+  SendRemoteString(0, 2, out);
+
+  log_debug(r);
+  log_debug(g);
+  log_debug(b);
+  log_debug(h);
+  log_debug(s);
+  log_debug(l);
+  log_debug(sl);
   logeol();
 }
 
@@ -934,10 +950,10 @@ void sample_rgb(int &rgb[], int f, int o, bool cal) {
     rgb[0] += rgbn[INPUT_RED];
     rgb[1] += rgbn[INPUT_GREEN];
     rgb[2] += rgbn[INPUT_BLUE];
-    log(rgbn[INPUT_RED]);
-    log(rgbn[INPUT_GREEN]);
-    log(rgbn[INPUT_BLUE]);
-    log(rgbn[INPUT_BLANK]);
+    log_debug(rgbn[INPUT_RED]);
+    log_debug(rgbn[INPUT_GREEN]);
+    log_debug(rgbn[INPUT_BLUE]);
+    log_debug(rgbn[INPUT_BLANK]);
     logeol();
   }
   for (int i = 0; i < 3; i++) {
@@ -955,13 +971,27 @@ int scan_rgb[3];
 void scan_face(int n, int f, int o, bool cal = false) {
   TextOut(0, LCD_LINE6, "Face");
   NumOut(5*6, LCD_LINE6, n);
-  log(f);
+  log_debug(f);
   logeol();
   tilt_release();
   move_rel(M_TURN, T_SOFF);
   scan_to_center();
+  string out, nstr, fstr, ostr, orgb_str;
+  nstr = NumToStr(n);
+  fstr = NumToStr(f);
+  ostr = NumToStr(o);
+
+  out = StrCat("Face ", nstr);
+  out = StrCat(out, fstr);
+  out = StrCat(out, ostr);
+  SendRemoteString(0, 2, out);
+
   sample_rgb(scan_rgb, f, 8, cal);
   int orgb = f*9+8;
+
+  orgb_str = NumToStr(orgb);
+  SendRemoteString(0, 2, orgb_str);
+
   for (int i = 0; i < 4; i++) {
     turn45();
     scan_to_corner();
@@ -969,12 +999,20 @@ void scan_face(int n, int f, int o, bool cal = false) {
     scan_turn_wait();
     sample_rgb(scan_rgb, f, o, cal);
     orgb = f*9+o;
+
+    orgb_str = NumToStr(orgb);
+    SendRemoteString(0, 2, orgb_str);
+
     turn45();
     scan_to_edge();
     set_rgb(orgb, scan_rgb);
     scan_turn_wait();
     sample_rgb(scan_rgb, f, o+1, cal);
     orgb += 1;
+
+    orgb_str = NumToStr(orgb);
+    SendRemoteString(0, 2, orgb_str);
+
     o = (o+2)&7;
   }
   move_rel(M_TURN, -T_SOFF);
@@ -2010,12 +2048,12 @@ task main() {
       timer_stop();
     }
 
-    log(pieces_valid);
-    log(valid_i);
+    log_debug(pieces_valid);
+    log_debug(valid_i);
     logeol();
-    log(white_rgb[0]);
-    log(white_rgb[1]);
-    log(white_rgb[2]);
+    log_debug(white_rgb[0]);
+    log_debug(white_rgb[1]);
+    log_debug(white_rgb[2]);
     logeol();
     close_log();
 

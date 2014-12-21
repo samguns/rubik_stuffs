@@ -1,162 +1,273 @@
-#include <SDL.h>
-#include <SDL_thread.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
-#ifndef bool
-typedef unsigned char       bool;
-#endif // bool
+#define NFACE           6
+#define POS(FF, OO) (((FF)*8)+(OO))
 
-#ifndef true
-#define true        1
-#endif // true
-#ifndef false
-#define false       0
-#endif // false
+const long cmax = 1024;
 
-#define NFACE       6
+int clr_map[] = {0, 1, 2, 3, 4, 5};
+int clr_ord[NFACE * 4];
 
-#define NMOTORS     3
-#define  OUT_A   0x00
-#define  OUT_B   0x01
-#define  OUT_C   0x02
-#define  OUT_AB   0x03
-#define  OUT_AC   0x04
-#define  OUT_BC   0x05
-#define  OUT_ABC   0x06
+int  sc_r[NFACE*9];
+int  sc_g[NFACE*9];
+int  sc_b[NFACE*9];
+int  sc_h[NFACE*9];
+int  sc_s[NFACE*9];
+int  sc_l[NFACE*9];
+int  sc_sl[NFACE*9];
+int sc_clr[NFACE * 9];
 
-#define M_DELAY     10
-#define M_SCALE     12
-#define AMAX        24
-#define VMAX        100
+#define CMP_H    0
+#define CMP_S    1
+#define CMP_SL   2
+#define CMP_SLR  3
+#define CMP_L    4
+#define CMP_LR   5
+#define CMP_R_G  6
+#define CMP_R_B  7
+#define CMP_B_G  8
 
-#define P_LOW       35
-#define P_HIGH      87
+#define CLR_R     0
+#define CLR_B     1
+#define CLR_O     2
+#define CLR_G     3
+#define CLR_W     4
+#define CLR_Y     5
 
-#define  RESET_NONE   0x00
-#define  RESET_COUNT   0x08
-#define  RESET_BLOCK_COUNT   0x20
-#define  RESET_ROTATION_COUNT   0x40
-#define  RESET_BLOCKANDTACHO   0x28
-#define  RESET_ALL   0x68
+#define CHR_R    'r'
+#define CHR_B    'b'
+#define CHR_O    'o'
+#define CHR_G    'g'
+#define CHR_W    'w'
+#define CHR_Y    'y'
 
+char clr_chr[] = {CHR_R, CHR_B, CHR_O, CHR_G, CHR_W, CHR_Y};
 
-static int tacho_A = 0;
-static int tacho_B = 0;
-static int tacho_C = 0;
-
-SDL_mutex *motor_mtx = NULL;
-bool quit = false;
-
-const unsigned char mmot[] = {OUT_A, OUT_B, OUT_C};
-bool mon[] = {false, false, false};
-bool mgo[] = {false, false, false};
-bool mup[] = {false, false, false};
-
-long mtx[] = {0, 0, 0};
-long mx[] = {0, 0, 0};
-long mv[] = {0, 0, 0};
-long ma[] = {0, 0, 0};
-long mp[] = {0, 0, 0};
-long me[] = {0, 0, 0};
-
-static int MotorTachoCount(int motor)
+void scan_result(void)
 {
-    int retval = 0;
-
-    switch (motor)
-    {
-    case OUT_A:
-        retval = tacho_A;
-        break;
-    case OUT_B:
-        retval = tacho_B;
-        break;
-    case OUT_C:
-        retval = tacho_C;
-        break;
-    default:
-        break;
-    }
-
-    return retval;
+    sc_r[29] = 378;
+    sc_g[29] = 392;
+    sc_b[29] = 371;
+    sc_h[29] = 484;
+    sc_s[
 }
 
-static void OnFwdEx(int motor, int power, int reset)
+int clr_ratio(long c0, long c1)
 {
-    switch (motor)
+    int ratio;
+
+    if (c0 < c1)
+        ratio = -(2000 * (c1-c0) / (c1+c0));
+    else if (c0 > c1)
+        ratio = (2000 * (c0-c1) / (c1+c0));
+    else
+        ratio = 0;
+
+    return ratio;
+}
+
+int compare_clrs(const int cmp_fn, const int c0, const int c1)
+{
+    int cmp = 0;
+
+    switch (cmp_fn)
     {
-    case OUT_A:
-        if (reset == RESET_NONE)
-            tacho_A += 1;
-        else
-            tacho_A = 0;
-        break;
+        case CMP_H:
+            cmp = ((sc_h[c1] > sc_h[c0]) ? 1 : 0);
+            break;
+        case CMP_S:
+            cmp = ((sc_s[c1] > sc_s[c0]) ? 1 : 0);
+            break;
+        case CMP_SL:
+            cmp = ((sc_sl[c1] > sc_sl[c0]) ? 1 : 0);
+            break;
+        case CMP_SLR:
+            cmp = ((sc_sl[c1] < sc_sl[c0]) ? 1 : 0);
+            break;
+        case CMP_L:
+            cmp = ((sc_l[c1] > sc_l[c0]) ? 1 : 0);
+            break;
+        case CMP_LR:
+            cmp = ((sc_l[c1] < sc_l[c0]) ? 1 : 0);
+            break;
+        case CMP_R_G:
+            cmp = (clr_ratio(sc_r[c1], sc_g[c1]) <
+                    clr_ratio(sc_r[c0], sc_g[c0]) ? 1 : 0);
+            break;
+        case CMP_R_B:
+            cmp = (clr_ratio(sc_r[c1], sc_b[c1]) <
+                    clr_ratio(sc_r[c0], sc_b[c0]) ? 1 : 0);
+            break;
+        case CMP_B_G:
+            cmp = (clr_ratio(sc_b[c1], sc_g[c1]) <
+                    clr_ratio(sc_b[c0], sc_g[c0]) ? 1 : 0);
+            break;
+        default:
+            break;
+    }
 
-    case OUT_B:
-        if (reset == RESET_NONE)
-            tacho_B += 1;
-        else
-            tacho_B = 0;
-        break;
+    return cmp;
+}
 
-    case OUT_C:
-        if (reset == RESET_NONE)
-            tacho_C += 1;
-        else
-            tacho_C = 0;
-        break;
+void sort_clrs(int *co, const int s, const int n, const int cmp_fn)
+{
+    const int e = s + n - 2;
+    int is = s;
+    int ie = e;
 
-    default:
-        break;
+    do
+    {
+        int il = e + 2;
+        int ih = s - 2;
+        int i;
+
+        for (i = is; i <= ie; i++)
+        {
+            if (compare_clrs(cmp_fn, co[i+1], co[i]))
+            {
+                int o = co[i];
+
+                co[i] = co[i+1];
+                co[i+1] = o;
+
+                if (i < il)
+                    il = i;
+
+                if (i > ih)
+                    ih = i;
+            }
+        }
+
+        is = il - 1;
+        if (is < s)
+            is = s;
+
+        ie = ih + 1;
+        if (ie > e)
+            ie = e;
+    }while (is <= ie);
+
+    return;
+}
+
+void sort_colors(int *co, int t, int s)
+{
+    int i;
+    sort_clrs(co, 0 * s, 6 * s, CMP_LR);
+    sort_clrs(co, 0 * s, 3 * s, CMP_SL);
+
+    sort_clrs(co, 1*s, 5*s, CMP_H);
+
+    switch (t)
+    {
+        case 0:
+            break;
+        case 1:
+            sort_clrs(co, 1 * s, 2 * s, CMP_R_G);
+            break;
+        case 2:
+            sort_clrs(co, 1 * s, 2 * s, CMP_B_G);
+            break;
+        case 3:
+            sort_clrs(co, 1 * s, 2 * s, CMP_R_B);
+            break;
+        case 4:
+            sort_clrs(co, 1 * s, 2 * s, CMP_SLR);
+            break;
+        case 5:
+            sort_clrs(co, 1 * s, 2 * s, CMP_L);
+            break;
+        default:
+            break;
+    }
+
+    for (i = 0; i < s; i++)
+    {
+        sc_clr[co[i]] = CLR_W;
+    }
+
+    for (; i < 2 * s; i++)
+    {
+        sc_clr[co[i]] = CLR_R;
+    }
+
+    for (; i < 3 * s; i++)
+    {
+        sc_clr[co[i]] = CLR_O;
+    }
+
+    for (; i < 4 * s; i++)
+    {
+        sc_clr[co[i]] = CLR_Y;
+    }
+
+    for (; i < 5 * s; i++)
+    {
+        sc_clr[co[i]] = CLR_G;
+    }
+
+    for (; i < 6 * s; i++)
+    {
+        sc_clr[co[i]] = CLR_B;
     }
 
     return;
 }
 
-static void OnRevEx(int motor, int power, int reset)
+void determine_colors(int *cu, int t)
 {
-    switch (motor)
+    int i, f, o;
+
+    for (i = 0; i < NFACE; i++)
+        clr_ord[i] = 9 * i + 8;
+
+    sort_colors(clr_ord, t, 1);
+
+    for (i = 0; i < NFACE; i++)
     {
-    case OUT_A:
-        if (reset == RESET_NONE)
-            tacho_A -= 1;
-        else
-            tacho_A = 0;
-        break;
+        clr_ord[4*i+0] = 9*i+0;
+        clr_ord[4*i+1] = 9*i+2;
+        clr_ord[4*i+2] = 9*i+4;
+        clr_ord[4*i+3] = 9*i+6;
+    }
 
-    case OUT_B:
-        if (reset == RESET_NONE)
-            tacho_B -= 1;
-        else
-            tacho_B = 0;
-        break;
+    sort_colors(clr_ord, t, 4);
 
-    case OUT_C:
-        if (reset == RESET_NONE)
-            tacho_C -= 1;
-        else
-            tacho_C = 0;
-        break;
+    for (i = 0; i < NFACE; i++)
+    {
+        clr_ord[4*i+0] = 9*i+1;
+        clr_ord[4*i+1] = 9*i+3;
+        clr_ord[4*i+2] = 9*i+5;
+        clr_ord[4*i+3] = 9*i+7;
+    }
 
-    default:
-        break;
+    sort_colors(clr_ord, t, 4);
+
+    for (f = 0; f < NFACE; f++)
+        clr_map[sc_clr[f*9+8]] = f;
+
+    clr_chr[clr_map[CLR_R]] = CHR_R;
+    clr_chr[clr_map[CLR_B]] = CHR_B;
+    clr_chr[clr_map[CLR_O]] = CHR_O;
+    clr_chr[clr_map[CLR_G]] = CHR_G;
+    clr_chr[clr_map[CLR_W]] = CHR_W;
+    clr_chr[clr_map[CLR_Y]] = CHR_Y;
+
+    for (f = 0; f < NFACE; f++)
+    {
+        for (o = 0; o < 8; o++)
+        {
+            cu[POS(f, o)] = clr_map[sc_clr[f*9+o]];
+        }
     }
 
     return;
 }
 
-static void OffEx(int motor, int reset)
-{
-    return;
-}
-
-void init_cube(unsigned char *cube)
+void init_cube(int *cube)
 {
     int o = 0;
-    unsigned char f;
-    int i;
+    int i, f;
     for (f = 0; f < NFACE; f++)
     {
         for (i = 0; i < 8; i++)
@@ -164,184 +275,19 @@ void init_cube(unsigned char *cube)
     }
 }
 
-static int motor_task(void *ptr)
-{
-    Uint32 ms = SDL_GetTicks();
-
-    while (quit == false)
-    {
-        int m;
-        SDL_LockMutex(motor_mtx);
-        for (m = 0; m < NMOTORS; m++)
-        {
-            if (mon[m])
-            {
-                bool rev = false;
-                unsigned char mot = mmot[m];
-                long x = mx[m];
-                long v = mv[m];
-                long a = ma[m];
-                long p = mp[m];
-                long e = 0;
-                long ax = M_SCALE * MotorTachoCount(mot);
-                long ex = ax - x;
-
-                if (-M_SCALE < ex && ex < M_SCALE)
-                    ax = x;
-                else if (mgo[m])
-                    e = me[m] - ex;
-
-                long d = mtx[m] - ax;
-
-                if (mup[m] ? (d < M_SCALE) : (d > -M_SCALE))
-                {
-                    mgo[m] = false;
-                    e = 0;
-                }
-                if (d < 0)
-                {
-                    d = -d;
-                    v = -v;
-                    a = -a;
-                    p = -p;
-                    e = -e;
-                    rev = true;
-                }
-
-                if (d >= M_SCALE)
-                {
-                    if (v >= 0)
-                    {
-                        long dd = (v + AMAX / 2) + (v * v) / (2 * AMAX);
-                        if (d >= dd)
-                        {
-                            p = P_HIGH;
-                            a = (AMAX * (VMAX - v)) / VMAX;
-                            e = 0;
-                        }
-                        else
-                        {
-                            a = -(v * v) / (2 *d);
-                            if (a < -v)
-                                a = -v;
-                            if (a < -AMAX)
-                                a = -AMAX;
-                            p = (P_HIGH * a * (VMAX - v)) / (AMAX * VMAX);
-                        }
-                    }
-                    else
-                    {
-                        a = -v;
-                        if (a > AMAX)
-                            a = AMAX;
-                        p = (P_HIGH * a * (VMAX - v)) / (AMAX * VMAX);
-                    }
-                }
-                else
-                {
-                    a = -v;
-                    if (a < -AMAX)
-                        a = -AMAX;
-                    else if (a > AMAX)
-                        a = AMAX;
-                    p = (P_HIGH * a) / AMAX;
-                }
-                d = v + a / 2;
-                v += a;
-                p += e;
-                if (p > P_HIGH)
-                {
-                    p = P_HIGH;
-                    e = 0;
-                }
-                else if (p < -P_HIGH)
-                {
-                    p = -P_HIGH;
-                    e = 0;
-                }
-                if (rev)
-                {
-                    d = -d;
-                    v = -v;
-                    a = -a;
-                    p = -p;
-                    e = -e;
-                }
-                if (p != mp[m])
-                {
-                    if (p > 0)
-                        OnFwdEx(mot, p, RESET_NONE);
-                    else if (p < 0)
-                        OnRevEx(mot, p, RESET_NONE);
-                    else
-                        OffEx(mot, RESET_NONE);
-
-                    mp[m] = p;
-                }
-
-                mx[m] = ax + d;
-                mv[m] = v;
-                ma[m] = a;
-                me[m] = e;
-            }
-        }
-        SDL_UnlockMutex(motor_mtx);
-
-        ms += M_DELAY;
-        Uint32 del = ms - SDL_GetTicks();
-        if (del < 1)
-            del = 1;
-        else if (del > M_DELAY)
-            del = M_DELAY;
-
-        SDL_Delay(del);
-    }
-
-    return 0;
-}
-
 int main(int argc, char *argv[])
 {
-    SDL_Window *window = NULL;
-    unsigned char cube[NFACE * 8];
-    SDL_Event e;
-
-    /* Initialize SDL (Note: video is required to start event loop) */
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't initialize SDL: %s\n", SDL_GetError());
-        exit(1);
-    }
-
-    /* Create a window to display joystick axis position */
-    window = SDL_CreateWindow("Mindcuber Test", SDL_WINDOWPOS_CENTERED,
-                              SDL_WINDOWPOS_CENTERED, 640,
-                              480, 0);
-    if (window == NULL) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create window: %s\n", SDL_GetError());
-        return SDL_FALSE;
-    }
-
-    motor_mtx = SDL_CreateMutex();
-
-    SDL_Thread* threadID = SDL_CreateThread(motor_task, "motor_task", NULL);
+    int cube[48];
+    int i;
 
     init_cube(cube);
 
-    while(quit == false)
-    {
-        while( SDL_PollEvent( &e ) != 0 )
-        {
-            if( e.type == SDL_QUIT )
-                quit = true;
-        }
-    }
+    scan_result();
 
-    SDL_DetachThread(threadID);
-    SDL_DestroyMutex(motor_mtx);
-    motor_mtx = NULL;
+	for (i = 0; i < 6; i++)
+	{
+	    determine_colors(cube, i);
+	}
 
-    SDL_DestroyWindow(window);
-    SDL_QuitSubSystem(SDL_INIT_VIDEO);
-
-    return 0;
+	return 0;
 }
