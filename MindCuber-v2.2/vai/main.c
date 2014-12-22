@@ -1,6 +1,7 @@
 #include <stdio.h>
 
-#define NFACE           6
+#include "scan_result.h"
+
 #define POS(FF, OO) (((FF)*8)+(OO))
 
 const long cmax = 1024;
@@ -8,14 +9,6 @@ const long cmax = 1024;
 int clr_map[] = {0, 1, 2, 3, 4, 5};
 int clr_ord[NFACE * 4];
 
-int  sc_r[NFACE*9];
-int  sc_g[NFACE*9];
-int  sc_b[NFACE*9];
-int  sc_h[NFACE*9];
-int  sc_s[NFACE*9];
-int  sc_l[NFACE*9];
-int  sc_sl[NFACE*9];
-int sc_clr[NFACE * 9];
 
 #define CMP_H    0
 #define CMP_S    1
@@ -43,14 +36,6 @@ int sc_clr[NFACE * 9];
 
 char clr_chr[] = {CHR_R, CHR_B, CHR_O, CHR_G, CHR_W, CHR_Y};
 
-void scan_result(void)
-{
-    sc_r[29] = 378;
-    sc_g[29] = 392;
-    sc_b[29] = 371;
-    sc_h[29] = 484;
-    sc_s[
-}
 
 int clr_ratio(long c0, long c1)
 {
@@ -216,7 +201,7 @@ void sort_colors(int *co, int t, int s)
 
 void determine_colors(int *cu, int t)
 {
-    int i, f, o;
+    int i, f, o, position, index, map_index;
 
     for (i = 0; i < NFACE; i++)
         clr_ord[i] = 9 * i + 8;
@@ -257,7 +242,11 @@ void determine_colors(int *cu, int t)
     {
         for (o = 0; o < 8; o++)
         {
-            cu[POS(f, o)] = clr_map[sc_clr[f*9+o]];
+            position = f * 8 + o;
+            position = POS(f, o);
+            index = f * 9 + o;
+            map_index = sc_clr[index];
+            cu[position] = clr_map[sc_clr[f*9+o]];
         }
     }
 
