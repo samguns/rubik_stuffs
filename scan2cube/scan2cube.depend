@@ -1,0 +1,6 @@
+# depslib dependency file v1.0
+1419258576 source:d:\github\rubik_stuffs\scan2cube\main.c
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+
