@@ -9,12 +9,20 @@
 #define CLR_W     4
 #define CLR_Y     5
 
+/*
 #define U        0
 #define F        1
 #define D        2
 #define B        3
 #define R        4
 #define L        5
+*/
+#define U        3
+#define F        2
+#define D        1
+#define B        0
+#define R        5
+#define L        4
 
 static char scan_table_chars[54];
 static int scan_table_ints[54];
@@ -257,16 +265,16 @@ static int find_edge(int *cube, int f0, int f1)
 {
     int e0;
 
-    pesudo_find_edge(cube, U, 1, B, 5, 0,  1, f0, f1);
-    FIND_EDGE(U, 1, B, 5, 0,  1);
+    pesudo_find_edge(cube, U, 3, B, 7, 0,  1, f0, f1);
+    FIND_EDGE(U, 3, B, 7, 0,  1);
 
-    pesudo_find_edge(cube, U, 7, L, 1, 2,  3, f0, f1);
+    pesudo_find_edge(cube, U, 1, L, 5, 2,  3, f0, f1);
     FIND_EDGE(U, 7, L, 1, 2,  3);
 
-    pesudo_find_edge(cube, U, 5, F, 1, 4,  5, f0, f1);
+    pesudo_find_edge(cube, U, 7, F, 3, 4,  5, f0, f1);
     FIND_EDGE(U, 5, F, 1, 4,  5);
 
-    pesudo_find_edge(cube, U, 3, R, 1, 6,  7, f0, f1);
+    pesudo_find_edge(cube, U, 5, R, 5, 6,  7, f0, f1);
     FIND_EDGE(U, 3, R, 1, 6,  7);
 
     pesudo_find_edge(cube, L, 3, F, 7, 8,  9, f0, f1);
@@ -350,6 +358,6 @@ int main()
             valid_i = i;
         }
     }
-    printf("\n");
+    printf("pieces_valid:%d\n", pieces_valid);
     return 0;
 }

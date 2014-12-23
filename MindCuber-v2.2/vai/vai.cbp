@@ -26,6 +26,10 @@
 		<Unit filename="main.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="scan_result.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="scan_result.h" />
 		<Extensions>
 			<code_completion />
 			<envvars />
