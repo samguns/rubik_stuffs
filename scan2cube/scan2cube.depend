@@ -1,11 +1,14 @@
 # depslib dependency file v1.0
-1419258576 source:d:\github\rubik_stuffs\scan2cube\main.c
+1419516499 source:d:\github\rubik_stuffs\scan2cube\main.c
 	<stdio.h>
 	<stdlib.h>
 	<string.h>
+	"mcmoves.h"
 
 1419322400 source:d:\nxt\rubik_stuffs\scan2cube\main.c
 	<stdio.h>
 	<stdlib.h>
 	<string.h>
+
+1419514159 d:\github\rubik_stuffs\scan2cube\mcmoves.h
 

@@ -1256,12 +1256,12 @@ void rot_edges(byte &cube[], int r,
 void rotate(byte &cube[], int f, int r) {
   r &= 3;
   switch (f) {
-  case U:  rot_edges(cube, r, B, 4, R, 0, F, 0, L, 0); break;
-  case F:  rot_edges(cube, r, U, 4, R, 6, D, 0, L, 2); break;
-  case D:  rot_edges(cube, r, F, 4, R, 4, B, 0, L, 4); break;
-  case B:  rot_edges(cube, r, D, 4, R, 2, U, 0, L, 6); break;
-  case R:  rot_edges(cube, r, U, 2, B, 2, D, 2, F, 2); break;
-  case L:  rot_edges(cube, r, U, 6, F, 6, D, 6, B, 6); break;
+  case 0:  rot_edges(cube, r, B, 6, R, 4, F, 2, L, 4); break;
+  case 1:  rot_edges(cube, r, U, 6, R, 2, D, 2, L, 6); break;
+  case 2:  rot_edges(cube, r, F, 6, R, 0, B, 2, L, 0); break;
+  case 3:  rot_edges(cube, r, D, 4, R, 2, U, 0, L, 6); break;
+  case 4:  rot_edges(cube, r, U, 2, B, 2, D, 2, F, 2); break;
+  case 5:  rot_edges(cube, r, U, 6, F, 6, D, 6, B, 6); break;
   default: error("rot face", f);
   }
   f *= 8;
