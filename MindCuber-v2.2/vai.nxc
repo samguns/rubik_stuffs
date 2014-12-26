@@ -1896,19 +1896,7 @@ int valid_i = 0;
 
 bool scan_solve_cube(byte &cube[]) {
   flash_off();
-  color_sensor_on();
-  scan_face(1, 3, 2);
-  tilt();
-  scan_face(2, 2, 2);
-  tilt();
-  scan_face(3, 1, 2);
-  tilt();
-  scan_face(4, 0, 2);
-  turn(-1);
-  tilt();
-  scan_face(5, 4, 6);
-  tilt(2);
-  scan_face(6, 5, 2);
+
   motors_off();
   flash_red();
   bool solved = false;
@@ -1945,6 +1933,59 @@ bool scan_solve_cube(byte &cube[]) {
   }
   uc = L;
   fc = D;
+  solve_fce[0] = 1;
+  solve_rot[0] = -1;
+
+  solve_fce[1] = 3;
+  solve_rot[1] = 1;
+
+  solve_fce[2] = 0;
+  solve_rot[2] = 1;
+
+  solve_fce[3] = 3;
+  solve_rot[3] = 2;
+
+  solve_fce[4] = 4;
+  solve_rot[4] = 2;
+
+  solve_fce[5] = 1;
+  solve_rot[5] = 1;
+
+  solve_fce[6] = 0;
+  solve_rot[6] = 1;
+
+  solve_fce[7] = 3;
+  solve_rot[7] = -1;
+
+  solve_fce[8] = 5;
+  solve_rot[8] = -1;
+
+  solve_fce[9] = 1;
+  solve_rot[9] = 1;
+
+  solve_fce[10] = 3;
+  solve_rot[10] = 1;
+
+  solve_fce[11] = 2;
+  solve_rot[11] = 2;
+
+  solve_fce[12] = 3;
+  solve_rot[12] = 1;
+
+  solve_fce[13] = 0;
+  solve_rot[13] = 1;
+
+  solve_fce[14] = 5;
+  solve_rot[14] = -1;
+
+  solve_fce[15] = 1;
+  solve_rot[15] = 2;
+
+  solve_fce[16] = 5;
+  solve_rot[16] = 1;
+
+  solve_n = 17;
+
   return solved;
 }
 
@@ -2079,6 +2120,7 @@ task main() {
             int ri = solve_rot[i];
             int fo = opposite[fi];
             int rn = 0;
+            string out, i_str, fi_str, ri_str, fo_str, rn_str;
             for (int j = i+1; rn == 0 && j < solve_n; j++) {
               if (solve_fce[j] != fo)
                 rn = solve_rot[j];
@@ -2087,6 +2129,18 @@ task main() {
             TextOut(0*6, LCD_LINE2, "Move    of");
             NumOut(5*6,  LCD_LINE2, i+1);
             NumOut(11*6, LCD_LINE2, solve_n);
+
+            i_str = NumToStr(i+1);
+            sprintf(fi_str, "fi:%d ", fi);
+            sprintf(ri_str, "ri:%d ", ri);
+            sprintf(fo_str, "fo:%d ", fo);
+            sprintf(rn_str, "rn:%d ", rn);
+            out = StrCat("Move of ", i_str);
+            out = StrCat(out, fi_str);
+            out = StrCat(out, ri_str);
+            out = StrCat(out, fo_str);
+            out = StrCat(out, rn_str);
+            SendRemoteString(0, 2, out);
             manipulate(cube, fi, ri, rn);
           }
           timer_stop();
