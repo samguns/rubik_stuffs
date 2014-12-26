@@ -11,20 +11,22 @@
 #define CLR_W     4
 #define CLR_Y     5
 
-/*
+
 #define U        0
 #define F        1
 #define D        2
 #define B        3
 #define R        4
 #define L        5
-*/
-#define U        3
-#define F        2
-#define D        1
-#define B        0
-#define R        5
-#define L        4
+
+#define CHR_R    'r'
+#define CHR_B    'b'
+#define CHR_O    'o'
+#define CHR_G    'g'
+#define CHR_W    'w'
+#define CHR_Y    'y'
+
+char clr_chr[] = {CHR_R, CHR_B, CHR_O, CHR_G, CHR_W, CHR_Y};
 
 static char scan_table_chars[54];
 static int scan_table_ints[54];
@@ -33,82 +35,220 @@ static int pieces_valid = 0;
 static int valid_i = 0;
 static int solve_n = 0;
 
-static void init_Ug(void)
+static int uc = U;
+static int fc = F;
+
+static const int imap[] = {
+  /*       U   F   D   B   R   L
+  /* U */ -1,  0, -1,  1,  2,  3,
+  /* F */  4, -1,  5, -1,  6,  7,
+  /* D */ -1,  8, -1,  9, 10, 11,
+  /* B */ 12, -1, 13, -1, 14, 15,
+  /* R */ 16, 17, 18, 19, -1, -1,
+  /* L */ 20, 21, 22, 23, -1, -1
+};
+
+static const int fmap[] = {
+  /* -- */
+  /* UF */ U, F, D, B, R, L,
+  /* -- */
+  /* UB */ U, B, D, F, L, R,
+  /* UR */ U, R, D, L, B, F,
+  /* UL */ U, L, D, R, F, B,
+
+  /* FU */ F, U, B, D, L, R,
+  /* -- */
+  /* FD */ F, D, B, U, R, L,
+  /* -- */
+  /* FR */ F, R, B, L, U, D,
+  /* FL */ F, L, B, R, D, U,
+
+  /* -- */
+  /* DF */ D, F, U, B, L, R,
+  /* -- */
+  /* DB */ D, B, U, F, R, L,
+  /* DR */ D, R, U, L, F, B,
+  /* DL */ D, L, U, R, B, F,
+
+  /* BU */ B, U, F, D, R, L,
+  /* -- */
+  /* BD */ B, D, F, U, L, R,
+  /* -- */
+  /* BR */ B, R, F, L, D, U,
+  /* BL */ B, L, F, R, U, D,
+
+  /* RU */ R, U, L, D, F, B,
+  /* RF */ R, F, L, B, D, U,
+  /* RD */ R, D, L, U, B, F,
+  /* RB */ R, B, L, F, U, D,
+  /* -- */
+  /* -- */
+
+  /* LU */ L, U, R, D, B, F,
+  /* LF */ L, F, R, B, U, D,
+  /* LD */ L, D, R, U, F, B,
+  /* LB */ L, B, R, F, D, U
+  /* -- */
+  /* -- */
+};
+
+static const int omap[] = {
+  /* -- */
+  /* UF */ 0, 0, 0, 0, 0, 0,
+  /* -- */
+  /* UB */ 4, 4, 4, 4, 0, 0,
+  /* UR */ 6, 0, 2, 4, 4, 0,
+  /* UL */ 2, 0, 6, 4, 0, 4,
+
+  /* FU */ 4, 4, 4, 4, 2, 6,
+  /* -- */
+  /* FD */ 0, 0, 0, 0, 6, 2,
+  /* -- */
+  /* FR */ 6, 6, 2, 6, 4, 0,
+  /* FL */ 2, 2, 6, 2, 0, 4,
+
+  /* -- */
+  /* DF */ 4, 4, 4, 4, 4, 4,
+  /* -- */
+  /* DB */ 0, 0, 0, 0, 4, 4,
+  /* DR */ 6, 4, 2, 0, 4, 0,
+  /* DL */ 2, 4, 6, 0, 0, 4,
+
+  /* BU */ 0, 0, 0, 0, 2, 6,
+  /* -- */
+  /* BD */ 4, 4, 4, 4, 6, 2,
+  /* -- */
+  /* BR */ 6, 2, 2, 2, 4, 0,
+  /* BL */ 2, 6, 6, 6, 0, 4,
+
+  /* RU */ 4, 2, 0, 6, 2, 2,
+  /* RF */ 2, 2, 2, 6, 2, 2,
+  /* RD */ 0, 2, 4, 6, 2, 2,
+  /* RB */ 6, 2, 6, 6, 2, 2,
+  /* -- */
+  /* -- */
+
+  /* LU */ 4, 6, 0, 2, 6, 6,
+  /* LF */ 6, 6, 6, 2, 6, 6,
+  /* LD */ 0, 6, 4, 2, 6, 6,
+  /* LB */ 2, 6, 2, 2, 6, 6,
+  /* -- */
+  /* -- */
+};
+
+static void init_U(void)
 {
-    scan_table_chars[27] = 'g';
-    scan_table_chars[28] = 'g';
-    scan_table_chars[29] = 'g';
-    scan_table_chars[30] = 'g';
-    scan_table_chars[31] = 'g';
-    scan_table_chars[32] = 'g';
-    scan_table_chars[33] = 'g';
-    scan_table_chars[34] = 'g';
-    scan_table_chars[35] = 'g';
+    scan_table_chars[27] = 'y';
+    scan_table_chars[28] = 'r';
+    scan_table_chars[29] = 'y';
+    scan_table_chars[30] = 'y';
+    scan_table_chars[31] = 'y';
+    scan_table_chars[32] = 'o';
+    scan_table_chars[33] = 'y';
+    scan_table_chars[34] = 'y';
+    scan_table_chars[35] = 'y';
 }
 
-static void init_Fo(void)
+static void init_F(void)
 {
-    scan_table_chars[18] = 'o';
-    scan_table_chars[19] = 'o';
-    scan_table_chars[20] = 'w';
-    scan_table_chars[21] = 'w';
-    scan_table_chars[22] = 'w';
-    scan_table_chars[23] = 'o';
-    scan_table_chars[24] = 'o';
-    scan_table_chars[25] = 'o';
-    scan_table_chars[26] = 'o';
+    scan_table_chars[18] = 'r';
+    scan_table_chars[19] = 'r';
+    scan_table_chars[20] = 'r';
+    scan_table_chars[21] = 'r';
+    scan_table_chars[22] = 'r';
+    scan_table_chars[23] = 'y';
+    scan_table_chars[24] = 'r';
+    scan_table_chars[25] = 'r';
+    scan_table_chars[26] = 'r';
 }
 
-static void init_Db(void)
+static void init_D(void)
 {
-    scan_table_chars[9] = 'b';
-    scan_table_chars[10] = 'b';
-    scan_table_chars[11] = 'b';
-    scan_table_chars[12] = 'b';
-    scan_table_chars[13] = 'b';
-    scan_table_chars[14] = 'b';
-    scan_table_chars[15] = 'b';
-    scan_table_chars[16] = 'b';
-    scan_table_chars[17] = 'b';
+    scan_table_chars[9] = 'w';
+    scan_table_chars[10] = 'w';
+    scan_table_chars[11] = 'w';
+    scan_table_chars[12] = 'w';
+    scan_table_chars[13] = 'w';
+    scan_table_chars[14] = 'w';
+    scan_table_chars[15] = 'w';
+    scan_table_chars[16] = 'w';
+    scan_table_chars[17] = 'w';
 }
 
-static void init_Br(void)
+static void init_B(void)
 {
-    scan_table_chars[0] = 'y';
-    scan_table_chars[1] = 'r';
-    scan_table_chars[2] = 'r';
-    scan_table_chars[3] = 'r';
-    scan_table_chars[4] = 'r';
-    scan_table_chars[5] = 'r';
-    scan_table_chars[6] = 'y';
-    scan_table_chars[7] = 'y';
-    scan_table_chars[8] = 'r';
+    scan_table_chars[0] = 'o';
+    scan_table_chars[1] = 'y';
+    scan_table_chars[2] = 'o';
+    scan_table_chars[3] = 'o';
+    scan_table_chars[4] = 'o';
+    scan_table_chars[5] = 'o';
+    scan_table_chars[6] = 'o';
+    scan_table_chars[7] = 'o';
+    scan_table_chars[8] = 'o';
 }
 
-static void init_Lw(void)
+static void init_L(void)
 {
-    scan_table_chars[36] = 'w';
-    scan_table_chars[37] = 'w';
-    scan_table_chars[38] = 'w';
-    scan_table_chars[39] = 'w';
-    scan_table_chars[40] = 'r';
-    scan_table_chars[41] = 'r';
-    scan_table_chars[42] = 'r';
-    scan_table_chars[43] = 'w';
-    scan_table_chars[44] = 'w';
+    scan_table_chars[36] = 'b';
+    scan_table_chars[37] = 'b';
+    scan_table_chars[38] = 'b';
+    scan_table_chars[39] = 'b';
+    scan_table_chars[40] = 'b';
+    scan_table_chars[41] = 'b';
+    scan_table_chars[42] = 'b';
+    scan_table_chars[43] = 'b';
+    scan_table_chars[44] = 'b';
 }
 
-static void init_Ry(void)
+static void init_R(void)
 {
-    scan_table_chars[45] = 'y';
-    scan_table_chars[46] = 'y';
-    scan_table_chars[47] = 'y';
-    scan_table_chars[48] = 'y';
-    scan_table_chars[49] = 'o';
-    scan_table_chars[50] = 'o';
-    scan_table_chars[51] = 'o';
-    scan_table_chars[52] = 'y';
-    scan_table_chars[53] = 'y';
+    scan_table_chars[45] = 'g';
+    scan_table_chars[46] = 'g';
+    scan_table_chars[47] = 'g';
+    scan_table_chars[48] = 'g';
+    scan_table_chars[49] = 'g';
+    scan_table_chars[50] = 'g';
+    scan_table_chars[51] = 'g';
+    scan_table_chars[52] = 'g';
+    scan_table_chars[53] = 'g';
+}
+
+static char int2char(int c)
+{
+    char ret;
+
+    switch(c)
+    {
+    case CLR_R:
+        ret = 'r';
+        break;
+
+    case CLR_B:
+        ret = 'b';
+        break;
+
+    case CLR_O:
+        ret = 'o';
+        break;
+
+    case CLR_G:
+        ret = 'g';
+        break;
+
+    case CLR_W:
+        ret = 'w';
+        break;
+
+    case CLR_Y:
+        ret = 'y';
+        break;
+
+    default:
+        break;
+    }
+
+    return ret;
 }
 
 static void char2int(void)
@@ -120,27 +260,27 @@ static void char2int(void)
         switch (scan_table_chars[i])
         {
         case 'r':
-            scan_table_ints[i] = 0;
+            scan_table_ints[i] = CLR_R;
             break;
 
         case 'b':
-            scan_table_ints[i] = 1;
+            scan_table_ints[i] = CLR_B;
             break;
 
         case 'o':
-            scan_table_ints[i] = 2;
+            scan_table_ints[i] = CLR_O;
             break;
 
         case 'g':
-            scan_table_ints[i] = 3;
+            scan_table_ints[i] = CLR_G;
             break;
 
         case 'w':
-            scan_table_ints[i] = 4;
+            scan_table_ints[i] = CLR_W;
             break;
 
         case 'y':
-            scan_table_ints[i] = 5;
+            scan_table_ints[i] = CLR_Y;
             break;
 
         default:
@@ -237,29 +377,29 @@ static int find_corner(int *cube, int f0, int f1, int f2)
 {
     int c0, ret;
 
-    ret = pesudo_find_corner(cube, U, 4, B, 6, R, 6, 0,  1,  2, f0, f1, f2);
-    FIND_CORNER(U, 4, B, 6, R, 6, 0,  1,  2);
+    ret = pesudo_find_corner(cube, U, 2, B, 4, R, 2, 0,  1,  2, f0, f1, f2);
+    FIND_CORNER(U, 2, B, 4, R, 2, 0,  1,  2);
 
-    ret = pesudo_find_corner(cube, U, 2, L, 4, B, 0, 3,  4,  5, f0, f1, f2);
-    FIND_CORNER(U, 2, L, 4, B, 0, 3,  4,  5);
+    ret = pesudo_find_corner(cube, U, 0, L, 0, B, 6, 3,  4,  5, f0, f1, f2);
+    FIND_CORNER(U, 0, L, 0, B, 6, 3,  4,  5);
 
-    ret = pesudo_find_corner(cube, U, 0, F, 2, L, 6, 6,  7,  8, f0, f1, f2);
-    FIND_CORNER(U, 0, F, 2, L, 6, 6,  7,  8);
+    ret = pesudo_find_corner(cube, U, 6, F, 0, L, 2, 6,  7,  8, f0, f1, f2);
+    FIND_CORNER(U, 6, F, 0, L, 2, 6,  7,  8);
 
-    ret = pesudo_find_corner(cube, U, 6, R, 4, F, 4, 9,  10, 11, f0, f1, f2);
-    FIND_CORNER(U, 6, R, 4, F, 4, 9,  10, 11);
+    ret = pesudo_find_corner(cube, U, 4, R, 0, F, 2, 9,  10, 11, f0, f1, f2);
+    FIND_CORNER(U, 4, R, 0, F, 2, 9,  10, 11);
 
-    ret = pesudo_find_corner(cube, D, 2, L, 0, F, 0, 12, 13, 14, f0, f1, f2);
-    FIND_CORNER(D, 2, L, 0, F, 0, 12, 13, 14);
+    ret = pesudo_find_corner(cube, D, 0, L, 4, F, 6, 12, 13, 14, f0, f1, f2);
+    FIND_CORNER(D, 0, L, 4, F, 6, 12, 13, 14);
 
-    ret = pesudo_find_corner(cube, D, 0, B, 2, L, 2, 15, 16, 17, f0, f1, f2);
-    FIND_CORNER(D, 0, B, 2, L, 2, 15, 16, 17);
+    ret = pesudo_find_corner(cube, D, 6, B, 0, L, 6, 15, 16, 17, f0, f1, f2);
+    FIND_CORNER(D, 6, B, 0, L, 6, 15, 16, 17);
 
-    ret = pesudo_find_corner(cube, D, 6, R, 0, B, 4, 18, 19, 20, f0, f1, f2);
-    FIND_CORNER(D, 6, R, 0, B, 4, 18, 19, 20);
+    ret = pesudo_find_corner(cube, D, 4, R, 4, B, 2, 18, 19, 20, f0, f1, f2);
+    FIND_CORNER(D, 4, R, 4, B, 2, 18, 19, 20);
 
-    ret = pesudo_find_corner(cube, D, 4, F, 6, R, 2, 21, 22, 23, f0, f1, f2);
-    FIND_CORNER(D, 4, F, 6, R, 2, 21, 22, 23);
+    ret = pesudo_find_corner(cube, D, 2, F, 4, R, 6, 21, 22, 23, f0, f1, f2);
+    FIND_CORNER(D, 2, F, 4, R, 6, 21, 22, 23);
 
     return -1;
 }
@@ -268,6 +408,42 @@ static int find_edge(int *cube, int f0, int f1)
 {
     int e0, ret;
 
+    ret = pesudo_find_edge(cube, U, 1, B, 5, 0,  1, f0, f1);
+    FIND_EDGE(U, 1, B, 5, 0,  1);
+
+    ret = pesudo_find_edge(cube, U, 7, L, 1, 2,  3, f0, f1);
+    FIND_EDGE(U, 7, L, 1, 2,  3);
+
+    ret = pesudo_find_edge(cube, U, 5, F, 1, 4,  5, f0, f1);
+    FIND_EDGE(U, 5, F, 1, 4,  5);
+
+    ret = pesudo_find_edge(cube, U, 3, R, 1, 6,  7, f0, f1);
+    FIND_EDGE(U, 3, R, 1, 6,  7);
+
+    ret = pesudo_find_edge(cube, L, 3, F, 7, 8,  9, f0, f1);
+    FIND_EDGE(L, 3, F, 7, 8,  9);
+
+    ret = pesudo_find_edge(cube, B, 7, L, 7, 10, 11, f0, f1);
+    FIND_EDGE(B, 7, L, 7, 10, 11);
+
+    ret = pesudo_find_edge(cube, D, 7, L, 5, 12, 13, f0, f1);
+    FIND_EDGE(D, 7, L, 5, 12, 13);
+
+    ret = pesudo_find_edge(cube, R, 3, B, 3, 14, 15, f0, f1);
+    FIND_EDGE(R, 3, B, 3, 14, 15);
+
+    ret = pesudo_find_edge(cube, D, 5, B, 1, 16, 17, f0, f1);
+    FIND_EDGE(D, 5, B, 1, 16, 17);
+
+    ret = pesudo_find_edge(cube, F, 3, R, 7, 18, 19, f0, f1);
+    FIND_EDGE(F, 3, R, 7, 18, 19);
+
+    ret = pesudo_find_edge(cube, D, 3, R, 5, 20, 21, f0, f1);
+    FIND_EDGE(D, 3, R, 5, 20, 21);
+
+    ret = pesudo_find_edge(cube, D, 1, F, 5, 22, 23, f0, f1);
+    FIND_EDGE(D, 1, F, 5, 22, 23);
+/*
     ret = pesudo_find_edge(cube, U, 3, B, 7, 0,  1, f0, f1);
     FIND_EDGE(U, 3, B, 7, 0,  1);
 
@@ -303,7 +479,7 @@ static int find_edge(int *cube, int f0, int f1)
 
     ret = pesudo_find_edge(cube, D, 3, F, 7, 22, 23, f0, f1);
     FIND_EDGE(D, 3, F, 7, 22, 23);
-
+*/
     return -1;
 }
 
@@ -769,26 +945,196 @@ static int solve(int *cube)
     return -1;
 }
 
+static void scan_face(int n, int f, int o)
+{
+    int orgb, i;
+
+    printf("Face:%d\n", n);
+
+    orgb = f*9+8;
+    printf("center:%d ", orgb);
+    for (i = 0; i < 4; i++)
+    {
+        //turn45
+        orgb = f*9+o;
+        printf("corner[%d]:%d ", i, orgb);
+
+        //turn45
+        orgb += 1;
+        printf("edge[%d]:%d ", i, orgb);
+
+        o = (o+2) & 7;
+    }
+    printf("\n");
+}
+
+static int clr_map[] = {0, 1, 2, 3, 4, 5};
+
+static int MAP(int current_U, int current_F)
+{
+    int ret;
+
+    ret = (imap[((current_U) * 6) + (current_F)] * 6);
+    return ret;
+}
+
+static void manipulate(int *cube, int f, int r, int rn)
+{
+    int map;
+
+    map = MAP(uc, fc);
+
+    if (fmap[map+U] == f)
+    {
+        uc = fmap[map+D];
+        fc = fmap[map+B];
+        printf("Tilt twice and ");
+    }
+    else if (fmap[map+F] == f)
+    {
+        uc = fmap[map+B];
+        fc = fmap[map+U];
+        printf("Tilt once and ");
+    }
+    else if (fmap[map+D] == f)
+    {
+        printf("Hold and ");
+    }
+    else if (fmap[map+B] == f)
+    {
+        uc = fmap[map+F];
+        fc = fmap[map+U];
+        printf("Tilt release, turn right twice, tilt once and ");
+    }
+    else if (fmap[map+R] == f)
+    {
+        uc = fmap[map+L];
+        fc = fmap[map+U];
+        printf("Tilt release, turn right once, tile once and ");
+    }
+    else
+    {
+        uc = fmap[map+R];
+        fc = fmap[map+U];
+        printf("Tilt release, turn left once, tile once and ");
+    }
+
+    printf("turn %d (-r)  %d (-rn)\n", -r, -rn);
+    //turn_face(-r, -rn);
+}
+
+static void move_cube(int *cube)
+{
+    int i, fi, ri, fo, rn, j;
+
+    for (i = 0; i < solve_n; i++)
+    {
+        fi = solve_fce[i];
+        ri = solve_rot[i];
+        fo = opposite[fi];
+        rn = 0;
+        for (j = i+1; rn == 0 && j < solve_n; j++)
+        {
+            if (solve_fce[j] != fo)
+                rn = solve_rot[j];
+        }
+        printf("Move of %d(%d)\n", i+1, solve_n);
+        switch (fi)
+        {
+        case U:
+            printf("U");
+            break;
+
+        case F:
+            printf("F");
+            break;
+
+        case D:
+            printf("D");
+            break;
+
+        case B:
+            printf("B");
+            break;
+
+        case R:
+            printf("R");
+            break;
+
+        case L:
+            printf("L");
+            break;
+
+        default:
+            break;
+        }
+
+        if ((ri >1) && (ri < 1))
+            printf("2");
+
+        if (ri < 0)
+            printf("' ");
+        else
+            printf(" ");
+
+        printf("\n");
+        manipulate(cube, fi, ri, rn);
+        printf("\n");
+    }
+
+    printf("Cube solved!\n");
+}
+
 int main()
 {
     int f, o, i;
+    int cube_solved = 0;
 
-    init_Ug();
-    init_Fo();
-    init_Db();
-    init_Br();
-    init_Lw();
-    init_Ry();
+    scan_face(1, 3, 2);
+    scan_face(2, 2, 2);
+    scan_face(3, 1, 2);
+    scan_face(4, 0, 2);
+    scan_face(5, 4, 6);
+    scan_face(6, 5, 2);
+
+    init_U();
+    init_F();
+    init_D();
+    init_B();
+    init_L();
+    init_R();
     char2int();
+
+    for (f = 0; f < 54; f++)
+        printf("sc_clr[%d] = %d;\n", f, scan_table_ints[f]);
+
+    for (f = 0; f < 6; f++)
+    {
+        clr_map[scan_table_ints[f*9+8]] = f;
+    }
+
+    clr_chr[clr_map[CLR_R]] = CHR_R;
+    clr_chr[clr_map[CLR_B]] = CHR_B;
+    clr_chr[clr_map[CLR_O]] = CHR_O;
+    clr_chr[clr_map[CLR_G]] = CHR_G;
+    clr_chr[clr_map[CLR_W]] = CHR_W;
+    clr_chr[clr_map[CLR_Y]] = CHR_Y;
 
     for (f = 0; f < 6; f++)
     {
         for (o = 0; o < 8; o++)
         {
-            cube[f*8+o] = scan_table_ints[f*9+o];
+            cube[f*8+o] = clr_map[scan_table_ints[f*9+o]];
             printf("cube[%d] = %d;\n", (f*8+o), cube[f*8+o]);
         }
     }
+
+    printf("U is %c\n", int2char(scan_table_ints[8]));
+    printf("F is %c\n", int2char(scan_table_ints[17]));
+    printf("D is %c\n", int2char(scan_table_ints[26]));
+    printf("B is %c\n", int2char(scan_table_ints[35]));
+    printf("R is %c\n", int2char(scan_table_ints[44]));
+    printf("L is %c\n", int2char(scan_table_ints[53]));
 
     for (i = 0; i < 6; i++)
     {
@@ -802,10 +1148,20 @@ int main()
             printf("i:%d solve:%d\n", i, ret);
             if (ret == 0)
             {
+                cube_solved = 1;
                 printf("Cube solved\n");
+                break;
             }
         }
     }
     printf("pieces_valid:%d\n", pieces_valid);
+
+    uc = L;
+    fc = D;
+
+    if (1 == cube_solved)
+    {
+        move_cube(cube);
+    }
     return 0;
 }

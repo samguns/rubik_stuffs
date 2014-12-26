@@ -5,10 +5,13 @@
 	<string.h>
 	"mcmoves.h"
 
-1419322400 source:d:\nxt\rubik_stuffs\scan2cube\main.c
+1419580593 source:d:\nxt\rubik_stuffs\scan2cube\main.c
 	<stdio.h>
 	<stdlib.h>
 	<string.h>
+	"mcmoves.h"
 
 1419514159 d:\github\rubik_stuffs\scan2cube\mcmoves.h
+
+1419552623 d:\nxt\rubik_stuffs\scan2cube\mcmoves.h
 
