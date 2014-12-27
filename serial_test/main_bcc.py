@@ -13,8 +13,8 @@ except:
     print("Can not open COM3")
 
 while(1):
-    #out_data = '\x09\x00\x80\x09\x05\x05\x41\x42\x43\x44\x00'
-    #ser.write(out_data)
+    out_data = '\x09\x00\x80\x09\x05\x05\x41\x42\x43\x44\x00'
+    ser.write(out_data)
     try:
     #print ("Read %d" % i)
         text = ser.read(1)

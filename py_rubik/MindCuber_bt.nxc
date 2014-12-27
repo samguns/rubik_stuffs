@@ -66,7 +66,6 @@
 //#define LOG
 
 // Include lookup tables of moves
-#include "mcmoves.h"
 
 void banner() {
   ClearScreen();
@@ -74,7 +73,7 @@ void banner() {
   TextOut(0, LCD_LINE1, "MindCuber v2.2p");
   TextOut(0, LCD_LINE2, "---------------");
 #else
-  TextOut(0, LCD_LINE1, "MindCuber vai");
+  TextOut(0, LCD_LINE1, "MindCuber BT");
   TextOut(0, LCD_LINE2, "--------------");
 #endif
 }
@@ -1463,59 +1462,6 @@ void solve_phase(byte &cube[], int mtb, const byte &mtd[], bool dorot = true) {
   }
 }
 
-void solve_one(byte &cube[], bool dorot) {
-  mv_n = 0;
-
-  idx_ic = 24;
-  idx_ie = 24;
-
-  index_init();
-  index_edge(cube, D, F);
-  index_edge(cube, D, R);
-  solve_phase(cube, mtb0, mtd0);
-
-  index_init();
-  index_corner(cube, D, F, R);
-  index_edge(cube, F, R);
-  solve_phase(cube, mtb1, mtd1);
-
-  index_init();
-  index_edge(cube, D, B);
-  solve_phase(cube, mtb2, mtd2);
-
-  index_init();
-  index_corner(cube, D, R, B);
-  index_edge(cube, R, B);
-  solve_phase(cube, mtb3, mtd3);
-
-  index_init();
-  index_edge(cube, D, L);
-  solve_phase(cube, mtb4, mtd4);
-
-  index_init();
-  index_corner(cube, D, B, L);
-  index_edge(cube, B, L);
-  solve_phase(cube, mtb5, mtd5);
-
-  index_init();
-  index_corner(cube, D, L, F);
-  index_edge(cube, L, F);
-  solve_phase(cube, mtb6, mtd6);
-
-  index_init();
-  index_corner(cube, U, R, F);
-  index_corner(cube, U, F, L);
-  index_corner(cube, U, L, B);
-  solve_phase(cube, mtb7, mtd7);
-
-  index_init();
-  index_edge(cube, U, R);
-  index_edge(cube, U, F);
-  index_edge(cube, U, L);
-  index_last();
-  solve_phase(cube, mtb8, mtd8, dorot);
-}
-
 #define MAP(UU, FF) (imap[((UU)*NFACE)+(FF)]*NFACE)
 
 const byte imap[] = {
@@ -1644,7 +1590,6 @@ void apply_pattern(byte &cube[], byte &pat_fce[], char &pat_rot[]) {
 bool solve_nomap(byte &cube[]) {
   solve_n = 0;
   copy_cube(solve_cube, cube);
-  solve_one(solve_cube, true);
 
   if (!solved(solve_cube))
     return false;
@@ -1728,7 +1673,6 @@ void solve_remap(byte &cube[], int map) {
     }
   }
 
-  solve_one(solve_cube, false);
   if (mv_n < solve_n) {
     solve_n = mv_n;
     for (int i = 0; i < mv_n; i++) {
@@ -2040,6 +1984,69 @@ void calibrate_tilt() {
   recal --;
 }
 
+mutex      cube_mtx;
+#define FACE_MASK       (7 << 2)
+#define TURN180_MASK    (1 << 1)
+#define CCW_MASK        (1)
+
+task bt_task()
+{
+    string input;
+    int str_len = 0;
+
+    Acquire(cube_mtx);
+
+    solve_n = 0;
+
+    while(true)
+    {
+        char ret;
+        
+        ret = ReceiveRemoteString(5, true, input);
+        NumOut(0, LCD_LINE2, ret);
+        if (ret != 0)
+            continue;
+
+        str_len = strlen(input);
+        NumOut(0, LCD_LINE3, str_len);
+
+        byte cube_moves[MV_MAX];
+        byte c_clockwise;
+        int turn_180;
+        int rotation;
+
+        StrToByteArray(input, cube_moves);
+
+        for (int i = 0; i < str_len; i++)
+        {
+            solve_fce[i] = (cube_moves[i] & FACE_MASK) >> 2;
+
+            c_clockwise = (cube_moves[i] & CCW_MASK);
+            turn_180 = (cube_moves[i] & TURN180_MASK) >> 1;
+            if (turn_180 == 1)
+                rotation = 2;
+            else
+                rotation = 1;
+            
+            if (c_clockwise == 1)
+                solve_rot[i] = -(rotation);
+            else
+                solve_rot[i] = rotation;
+
+            solve_n++;
+        }
+
+        uc = U;
+        fc = L;
+
+        Release(cube_mtx);
+        Wait(1000);
+        break;
+    }
+
+    //Release(cube_mtx);
+}
+
 task main() {
   byte cube[NFACE*8];
 
@@ -2051,13 +2058,6 @@ task main() {
 #endif
   TextOut(0, LCD_LINE4, "By David Gilday");
   TextOut(0, LCD_LINE5, "mindcuber.com");
-
-  // Read the white calibration value from the configuration file
-  unsigned int cfgl;
-  if (OpenFileRead(cfg_name, cfgl, cfgh) == LDR_SUCCESS) {
-    Read(cfgh, white_rgb);
-    CloseFile(cfgh);
-  }
 
   start motor_task;
   flash_red();
@@ -2072,19 +2072,9 @@ task main() {
 
   byte msg_line = LCD_LINE7;
   while (true) {
+    start bt_task;
     ClearLine(msg_line);
-    TextOut(0*6, msg_line, "Remove cube...");
-    bool cal_white = false;
-    while (!cube_absent()) {
-      if (!cal_white && center_pressed()) {
-        msg_line = LCD_LINE7;
-        banner();
-        TextOut(0*6, LCD_LINE4, "Calibrate white");
-        TextOut(0*6, msg_line, "Remove cube...");
-        cal_white = true;
-      }
-      Wait(1);
-    }
+
     cube_detect_off();
     calibrate_tilt();
     flash_off();
@@ -2103,75 +2093,45 @@ task main() {
     banner();
     TextOut(0*6, LCD_LINE4, "Scanning...");
 
-    create_log();
+    Acquire(cube_mtx);
+    timer_start();
 
-    bool solved = false;
-    pieces_valid = 0;
-    if (cal_white) {
-      calibrate_white();
-    } else {
-      msg_line = LCD_LINE2;
-      timer_start();
-      for (int tries = 0; !solved && tries < 3; tries ++) {
-        if (scan_solve_cube(cube)) {
-          // Apply solution to the cube
-          for (int i = 0; i < solve_n; i++) {
-            int fi = solve_fce[i];
-            int ri = solve_rot[i];
-            int fo = opposite[fi];
-            int rn = 0;
-            string out, i_str, fi_str, ri_str, fo_str, rn_str;
-            for (int j = i+1; rn == 0 && j < solve_n; j++) {
-              if (solve_fce[j] != fo)
-                rn = solve_rot[j];
-            }
-            ClearLine(LCD_LINE2);
-            TextOut(0*6, LCD_LINE2, "Move    of");
-            NumOut(5*6,  LCD_LINE2, i+1);
-            NumOut(11*6, LCD_LINE2, solve_n);
+    for (int i = 0; i < solve_n; i++)
+    {
+        int fi = solve_fce[i];
+        int ri = solve_rot[i];
+        int fo = opposite[fi];
+        int rn = 0;
 
-            i_str = NumToStr(i+1);
-            sprintf(fi_str, "fi:%d ", fi);
-            sprintf(ri_str, "ri:%d ", ri);
-            sprintf(fo_str, "fo:%d ", fo);
-            sprintf(rn_str, "rn:%d ", rn);
-            out = StrCat("Move of ", i_str);
-            out = StrCat(out, fi_str);
-            out = StrCat(out, ri_str);
-            out = StrCat(out, fo_str);
-            out = StrCat(out, rn_str);
-            SendRemoteString(0, 2, out);
-            manipulate(cube, fi, ri, rn);
-          }
-          timer_stop();
-          flash_green();
-          banner();
-          TextOut(0*6, LCD_LINE3, "Solved!");
-          TextOut(0*6, LCD_LINE4, "Moves");
-          NumOut(6*6,  LCD_LINE4, solve_n);
-          TextOut(0*6, LCD_LINE5, "Time");
-          TextOut(6*6, LCD_LINE5, tmr_str);
-          solved = true;
-          msg_line = LCD_LINE7;
+        for (int j = i+1; rn == 0 && j < solve_n; j++) {
+          if (solve_fce[j] != fo)
+            rn = solve_rot[j];
         }
-      }
-      timer_stop();
-    }
+        ClearLine(LCD_LINE2);
+        TextOut(0*6, LCD_LINE2, "Move    of");
+        NumOut(5*6,  LCD_LINE2, i+1);
+        NumOut(11*6, LCD_LINE2, solve_n);
 
-    log(pieces_valid);
-    log(valid_i);
-    logeol();
-    log(white_rgb[0]);
-    log(white_rgb[1]);
-    log(white_rgb[2]);
-    logeol();
-    close_log();
+        manipulate(cube, fi, ri, rn);
+    }
+    timer_stop();
+    flash_green();
+    banner();
+    TextOut(0*6, LCD_LINE3, "Solved!");
+    TextOut(0*6, LCD_LINE4, "Moves");
+    NumOut(6*6,  LCD_LINE4, solve_n);
+    TextOut(0*6, LCD_LINE5, "Time");
+    TextOut(6*6, LCD_LINE5, tmr_str);
+
+    msg_line = LCD_LINE7;
 
     scan_away();
     tilt_away();
-    scan_wait();
-    if (solved)
-      turn(8);
+
+    turn(8);
+
+    Release(cube_mtx);
+    stop bt_task;
   }
 }
 
