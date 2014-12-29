@@ -6,15 +6,33 @@ Entering any line of input at the terminal will exit the server.
 '''
 import select
 import socket
+import sys
 
-
-host = '127.0.0.1'
+host = None
 port = 50007
-
+server = None
 size = 1024
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server.bind((host,port))
-server.listen(5)
+for res in socket.getaddrinfo(host, port, socket.AF_INET,
+                              socket.SOCK_STREAM, 0, socket.AI_PASSIVE):
+    af, socktype, proto, canonname, sa = res
+    try:
+        server = socket.socket(af, socktype, proto)
+    except socket.error as msg:
+        server = None
+        continue
+    try:
+        server.bind(sa)
+        server.listen(1)
+    except socket.error as msg:
+        server.close()
+        server = None
+        continue
+    break
+
+if server is None:
+    print 'could not open socket'
+    sys.exit(1)
+
 input = [server]
 output = []
 error_fd = []
