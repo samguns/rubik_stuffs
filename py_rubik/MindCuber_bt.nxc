@@ -2065,9 +2065,9 @@ task main() {
   init_cube(cube);
 
   calibrate_tilt();
-  endstop(M_SCAN);
-  scan_away();
-  scan_wait();
+  //endstop(M_SCAN);
+  //scan_away();
+  //scan_wait();
   motors_on();
 
   byte msg_line = LCD_LINE7;
@@ -2125,7 +2125,7 @@ task main() {
 
     msg_line = LCD_LINE7;
 
-    scan_away();
+    //scan_away();
     tilt_away();
 
     turn(8);
