@@ -33,4 +33,5 @@ if __name__ == "__main__":
         sys.exit(1)
 
     s.sendall("\x41\x42")
+    print s.recv(1024)
     s.close()

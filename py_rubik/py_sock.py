@@ -10,6 +10,7 @@ import sys
 
 if __name__ == "__main__":
     s = None
+    i = 0
     running = 1
     input = []
 
@@ -59,6 +60,9 @@ if __name__ == "__main__":
                     input.remove(in_sock)
                     print "Closing ", in_sock
                 else:
+                    hello_str = "Hello" + str(i) + "\n"
+                    in_sock.sendall(hello_str)
                     print repr(data)
+                    i += 1
 
     s.close()
