@@ -32,6 +32,10 @@ if __name__ == "__main__":
         print "Could not open socket"
         sys.exit(1)
 
-    s.sendall("\x41\x42")
-    print s.recv(1024)
+    msg = raw_input("Send to server --> ")
+    s.sendall(msg)
+    try:
+        print s.recv(1024)
+    except KeyboardInterrupt:
+        pass
     s.close()
