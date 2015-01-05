@@ -30,6 +30,7 @@ struct hsv_color rgb_to_hsv(struct rgb_color rgb)
 {
     struct hsv_color hsv;
     unsigned char rgb_min, rgb_max;
+    unsigned char test;
 
     rgb_min = MIN3(rgb.r, rgb.g, rgb.b);
     rgb_max = MAX3(rgb.r, rgb.g, rgb.b);
@@ -47,6 +48,12 @@ struct hsv_color rgb_to_hsv(struct rgb_color rgb)
         hsv.hue = 0;
         return hsv;
     }
+
+    test = rgb.g - rgb.b;
+    //test *= 43;
+    test /= (rgb_max - rgb_min);
+    test *= 43;
+    printf("0x%x\n", test);
 
     if (rgb_max == rgb.r)
     {
@@ -71,10 +78,14 @@ int main(int argc, char *argv[])
     struct rgb_color rgb;
     struct hsv_color hsv;
 
+    rgb.r = 227;
+    rgb.g = 27;
+    rgb.b = 84;
+/*
     rgb.r = (unsigned char)atoi(argv[1]);
     rgb.g = (unsigned char)atoi(argv[2]);
     rgb.b = (unsigned char)atoi(argv[3]);
-
+*/
     hsv = rgb_to_hsv(rgb);
     printf("Hue:%d Sat:%d Val:%d Lum:%d\n", hsv.hue, hsv.sat, hsv.val, hsv.lum);
     return 0;

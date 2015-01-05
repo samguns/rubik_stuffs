@@ -2,6 +2,7 @@
 __author__ = 'sam'
 
 import re
+from ctypes import *
 
 #Orange
 U = "R227G41B0R210G28B0R203G25B0R225G37B0R201G33B2R201G31B1R224G30B0R202G25B1R189G23B5"
@@ -71,25 +72,32 @@ class rgb_object:
     def rgb_to_hslv(self):
         rgb_min = min(self.red, self.green, self.blue)
         rgb_max = max(self.red, self.green, self.blue)
-        delta = rgb_max - rgb_min
-        self.val = rgb_max
+        c_ubye_max = c_ubyte(rgb_max)
+        c_ubye_min = c_ubyte(rgb_min)
+        delta = c_ubyte(c_ubye_max.value - c_ubye_min.value)
+        g = c_ubyte(self.green)
+        r = c_ubyte(self.red)
+        b = c_ubyte(self.blue)
+        hue = c_ubyte(0)
+        self.val = c_ubye_max.value
 
         if self.val == 0:
             self.hue = self.sat = self.lum = 0
             return
 
-        self.sat = 255 * (long)(delta) / self.val
+        self.sat = 255 * (long)(delta.value) / self.val
         if (self.sat == 0):
             self.hue = 0
             return
 
         if (rgb_max == self.red):
-            self.hue = 43 * ((self.green - self.blue) % 256) / delta
+            hue.value = 0 + 43 * (g.value - b.value) / delta.value
         elif (rgb_max == self.green):
-            self.hue = 85 + 43 * ((self.green - self.red) % 256) / delta
+            hue.value = 85 + 43 * (g.value - r.value) / delta.value
         else:
-            self.hue = 171 + 43 * ((self.red - self.green) % 256) / delta
+            hue.value = 171 + 43 * (r.value - g.value) / delta.value
 
+        self.hue = hue.value
         self.lum = (rgb_max + rgb_min) / 2
         return
 
@@ -157,36 +165,86 @@ if __name__ == "__main__":
     for items in face_r:
         all_faces.append(items)
 
+    all_faces_hue_map = {}
     i = 0
-    for all in all_faces:
-        print i, "r:", all.getRed(), "g:", all.getGreen(), "b:", all.getBlue(), \
-                "hue:", all.getHue(), "sat:", all.getSat(), "val:", all.getVal(), "lum:", all.getLum()
+    for items in all_faces:
+        all_faces_hue_map.setdefault(items.getHue(), []).append(i)
+        print i, "r:", items.getRed(), "g:", items.getGreen(), "b:", items.getBlue(), \
+                "hue:", items.getHue(), "sat:", items.getSat(), "val:", items.getVal(), "lum:", items.getLum()
         i += 1
 
-'''
-face_u_red_map = {}
-face_u_green_map = {}
-face_u_blue_map = {}
+    i = 0
+    color_table = []
+    sorted_hue_keys = sorted(all_faces_hue_map.keys(), reverse=True)
+    for hue_key in sorted_hue_keys:
+        print hue_key,
+        for items in all_faces_hue_map[hue_key]:
+            color_table.append(items)
+            print items,
+        print " "
 
+    red_faces = color_table[0:9]
+    blue_faces = color_table[9:18]
+    green_faces = color_table[18:27]
+    white_faces = color_table[27:36]
+    yellow_faces = color_table[36:45]
+    orange_faces = color_table[45:54]
 
-i = 0
-for objects in face_u:
-    face_u_red_map[objects.getRed()] = i
-    face_u_green_map[objects.getGreen()] = i
-    face_u_blue_map[objects.getBlue()] = i
-    print "r:%d g:%d b:%d" % (objects.getRed(), objects.getGreen(), objects.getBlue())
-    i += 1
+    print "red", red_faces
+    print "orange", orange_faces
+    print "yellow", yellow_faces
+    print "green", green_faces
+    print "blue", blue_faces
+    print "white", white_faces
+    print "########"
 
-sorted_red_keys = sorted(face_u_red_map.keys(), reverse=True)
-print sorted_red_keys
-for red_key in sorted_red_keys:
-    print face_u_red_map[red_key]
+    red_faces_final = []
+    blue_faces_final = []
+    green_faces_final = []
+    white_faces_final = []
+    yellow_faces_final = []
+    orange_faces_final = []
+    for red in red_faces:
+        if all_faces[red].getGreen() >= all_faces[red].getBlue():
+            orange_faces_final.append(red)
+        else:
+            red_faces_final.append(red)
 
-sorted_green_keys = sorted(face_u_green_map.keys(), reverse=True)
-print sorted_green_keys
-'''
-'''
-for number in nums[::-1]:
-    print int(number),
-'''
+    for orange in orange_faces:
+        if all_faces[orange].getBlue() >= all_faces[orange].getGreen():
+            red_faces_final.append(orange)
+        else:
+            orange_faces_final.append(orange)
+
+    for blue in blue_faces:
+        if all_faces[blue].getGreen() >= all_faces[blue].getBlue():
+            green_faces_final.append(blue)
+        else:
+            blue_faces_final.append(blue)
+
+    for green in green_faces:
+        if all_faces[green].getBlue() >= all_faces[green].getGreen():
+            blue_faces.append(green)
+        else:
+            green_faces_final.append(green)
+
+    for yellow in yellow_faces:
+        if all_faces[yellow].getSat() < 50:
+            white_faces_final.append(yellow)
+        else:
+            yellow_faces_final.append(yellow)
+
+    for white in white_faces:
+        if all_faces[white].getSat() > 50:
+            yellow_faces_final.append(white)
+        else:
+            white_faces_final.append(white)
+
+    print "red", red_faces_final
+    print "orange", orange_faces_final
+    print "yellow", yellow_faces_final
+    print "green", green_faces_final
+    print "blue", blue_faces_final
+    print "white", white_faces_final
+
 
