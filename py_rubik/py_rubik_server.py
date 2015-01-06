@@ -217,12 +217,12 @@ def sort_cube_colors():
     yellow_faces = color_table[36:45]
     orange_faces = color_table[45:54]
 
-    print "red", red_faces
-    print "orange", orange_faces
-    print "yellow", yellow_faces
-    print "green", green_faces
-    print "blue", blue_faces
-    print "white", white_faces
+    print "red", sorted(red_faces)
+    print "orange", sorted(orange_faces)
+    print "yellow", sorted(yellow_faces)
+    print "green", sorted(green_faces)
+    print "blue", sorted(blue_faces)
+    print "white", sorted(white_faces)
     print "########"
 
     red_faces_final = []
@@ -249,23 +249,34 @@ def sort_cube_colors():
             color_map[orange] = "O"
 
     for blue in blue_faces:
-        if all_faces[blue].getGreen() >= all_faces[blue].getBlue():
+        red_t = all_faces[blue].getRed()
+        green_t = all_faces[blue].getGreen()
+        blue_t = all_faces[blue].getBlue()
+        rgb_max = max(red_t, green_t, blue_t)
+        if (rgb_max == blue_t) and (red_t + green_t < blue_t):
+            blue_faces_final.append(blue)
+            color_map[blue] = "B"
+        elif (rgb_max == green_t) and (red_t + blue_t < green_t):
             green_faces_final.append(blue)
             color_map[blue] = "G"
         else:
-            blue_faces_final.append(blue)
-            color_map[blue] = "B"
+            white_faces_final.append(blue)
+            color_map[blue] = "W"
 
     for green in green_faces:
-        if all_faces[green].getBlue() >= all_faces[green].getGreen():
-            blue_faces_final.append(green)
-            color_map[green] = "B"
-        elif (2 * all_faces[green].getRed() >= all_faces[green].getGreen()):
-            white_faces_final.append(green)
-            color_map[green] = "W"
-        else:
+        red_t = all_faces[green].getRed()
+        green_t = all_faces[green].getGreen()
+        blue_t = all_faces[green].getBlue()
+        rgb_max = max(red_t, green_t, blue_t)
+        if (rgb_max == green_t) and (red_t + blue_t < green_t):
             green_faces_final.append(green)
             color_map[green] = "G"
+        elif (rgb_max == blue_t) and (red_t + green_t < blue_t):
+            blue_faces_final.append(green)
+            color_map[green] = "B"
+        else:
+            white_faces_final.append(green)
+            color_map[green] = "W"
 
     for yellow in yellow_faces:
         if all_faces[yellow].getSat() < 50:
@@ -276,19 +287,25 @@ def sort_cube_colors():
             color_map[yellow] = "Y"
 
     for white in white_faces:
-        if all_faces[white].getSat() > 50:
-            yellow_faces_final.append(white)
-            color_map[white] = "Y"
-        else:
+        red_t = all_faces[white].getRed()
+        green_t = all_faces[white].getGreen()
+        blue_t = all_faces[white].getBlue()
+        rgb_max = max(red_t, green_t, blue_t)
+        if (red_t + green_t > blue_t) and \
+                (red_t + blue_t > green_t) and \
+                (green_t + blue_t > red_t):
             white_faces_final.append(white)
             color_map[white] = "W"
+        elif (rgb_max == green_t) and (red_t + blue_t < green_t):
+            green_faces_final.append(white)
+            color_map[white] = "G"
 
-    print "red", red_faces_final
-    print "orange", orange_faces_final
-    print "yellow", yellow_faces_final
-    print "green", green_faces_final
-    print "blue", blue_faces_final
-    print "white", white_faces_final
+    print "red", sorted(red_faces_final)
+    print "orange", sorted(orange_faces_final)
+    print "yellow", sorted(yellow_faces_final)
+    print "green", sorted(green_faces_final)
+    print "blue", sorted(blue_faces_final)
+    print "white", sorted(white_faces_final)
 
     sorted_color_map_keys = sorted(color_map.keys())
     for index in sorted_color_map_keys:
@@ -324,7 +341,7 @@ def process_data(fd, data):
             #solve_cube()
             face_u = face_f = face_d = face_b = face_r = face_l = ""
             current_face = 255
-            pass
+            fd.sendall("Acknowledge!")
     else:
         sample_color(data)
         temp.sendall("Roger that!")
