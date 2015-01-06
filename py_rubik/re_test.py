@@ -5,17 +5,18 @@ import re
 from ctypes import *
 
 #Orange
-U = "R227G41B0R210G28B0R203G25B0R225G37B0R201G33B2R201G31B1R224G30B0R202G25B1R189G23B5"
+#B = "R227G41B0R210G28B0R203G25B0R225G37B0R201G33B2R201G31B1R224G30B0R202G25B1R189G23B5"
+B = "R177G7B77R182G6B78R146G182B202R100G140B162R186G9B85R0G143B31R231G24B1R189G211B5R219G14B135"
 #White
-F = "R191G187B178R171G168B159R164G161B152R186G187B179R161G162B154R160G161B153R189G190B182R162G167B161R145G148B141"
+D = "R191G187B178R171G168B159R164G161B152R186G187B179R161G162B154R160G161B153R189G190B182R162G167B161R145G148B141"
 #Red
-D = "R227G27B84R212G18B68R208G17B69R229G18B80R207G21B66R206G20B68R220G17B81R203G16B65R189G17B59"
+F = "R227G27B84R212G18B68R208G17B69R229G18B80R207G21B66R206G20B68R220G17B81R203G16B65R189G17B59"
 #Yellow
-B = "R178G179B0R154G159B0R146G153B0R177G181B0R143G149B2R142G152B0R177G185B0R150G158B0R136G141B0"
+U = "R178G179B0R154G159B0R146G153B0R177G181B0R143G149B2R142G152B0R177G185B0R150G158B0R136G141B0"
 #Green
-L = "R0G170B23R0G150B10R0G142B11R0G168B11R2G137B12R0G142B14R0G172B16R1G151B21R3G134B22"
+R = "R0G170B23R0G150B10R0G142B11R0G168B11R2G137B12R0G142B14R0G172B16R1G151B21R3G134B22"
 #Blue
-R = "R0G120B193R0G97B175R0G90B167R0G115B191R0G95B168R0G98B166R0G119B197R0G97B174R0G91B161"
+L = "R0G120B193R0G97B175R0G90B167R0G115B191R0G95B168R0G98B166R0G119B197R0G97B174R0G91B161"
 
 class rgb_object:
     def __init__(self):
@@ -45,26 +46,14 @@ class rgb_object:
     def getBlue(self):
         return self.blue
 
-    def setHue(self, hue):
-        self.hue = hue
-
     def getHue(self):
         return self.hue
-
-    def setSat(self, sat):
-        self.sat = sat
 
     def getSat(self):
         return self.sat
 
-    def setVal(self, val):
-        self.val = val
-
     def getVal(self):
         return self.val
-
-    def setLum(self, lum):
-        self.lum = lum
 
     def getLum(self):
         return self.lum
@@ -204,41 +193,54 @@ if __name__ == "__main__":
     white_faces_final = []
     yellow_faces_final = []
     orange_faces_final = []
+    color_map = {}
     for red in red_faces:
         if all_faces[red].getGreen() >= all_faces[red].getBlue():
             orange_faces_final.append(red)
+            color_map[red] = "O"
         else:
             red_faces_final.append(red)
+            color_map[red] = "R"
 
     for orange in orange_faces:
         if all_faces[orange].getBlue() >= all_faces[orange].getGreen():
             red_faces_final.append(orange)
+            color_map[orange] = "R"
         else:
             orange_faces_final.append(orange)
+            color_map[orange] = "O"
 
     for blue in blue_faces:
         if all_faces[blue].getGreen() >= all_faces[blue].getBlue():
             green_faces_final.append(blue)
+            color_map[blue] = "G"
         else:
             blue_faces_final.append(blue)
+            color_map[blue] = "B"
 
     for green in green_faces:
         if all_faces[green].getBlue() >= all_faces[green].getGreen():
             blue_faces.append(green)
+            color_map[green] = "B"
         else:
             green_faces_final.append(green)
+            color_map[green] = "G"
 
     for yellow in yellow_faces:
         if all_faces[yellow].getSat() < 50:
             white_faces_final.append(yellow)
+            color_map[yellow] = "W"
         else:
             yellow_faces_final.append(yellow)
+            color_map[yellow] = "Y"
 
     for white in white_faces:
         if all_faces[white].getSat() > 50:
             yellow_faces_final.append(white)
+            color_map[white] = "Y"
         else:
             white_faces_final.append(white)
+            color_map[white] = "W"
 
     print "red", red_faces_final
     print "orange", orange_faces_final
@@ -247,4 +249,6 @@ if __name__ == "__main__":
     print "blue", blue_faces_final
     print "white", white_faces_final
 
-
+    sorted_color_map_keys = sorted(color_map.keys())
+    for index in sorted_color_map_keys:
+        print "face:", index, "color:", color_map[index]

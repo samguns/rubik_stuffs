@@ -1,0 +1,1 @@
+L R' U2 B F' R U2 L' B L F R B2 L' U R2 F' D  (18f) 
