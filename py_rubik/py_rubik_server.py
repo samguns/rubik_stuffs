@@ -7,8 +7,33 @@ import select
 import sys
 import argparse
 import re
+import urllib2
 from ctypes import *
 from serial import *
+from HTMLParser import HTMLParser
+
+readfds = []
+android = None
+nxt = None
+U = 0
+F = 1
+D = 2
+B = 3
+R = 4
+L = 5
+TURN_180 = 1
+COUNTER_CLOCKWISE = 1
+
+face_u = []
+face_f = []
+face_d = []
+face_b = []
+face_r = []
+face_l = []
+color_map = {}
+red_re = re.compile(r"(?<=R)\d*")
+green_re = re.compile(r"(?<=G)\d*")
+blue_re = re.compile(r"(?<=B)\d*")
 
 class rgb_object:
     def __init__(self):
@@ -106,27 +131,24 @@ def init_serial(com):
 
     return ser
 
+def nxt_write(msg_string):
+    msg = str('\x00\x80\x09\x05')
+    msg_len = len(msg_string) + 1
+    total_msg_len = msg_len + 4
+    msg += to_bytes([msg_len])
 
-readfds = []
-android = None
-temp = None
-U = 0
-F = 1
-D = 2
-B = 3
-R = 4
-L = 5
+    for move_byte in msg_string:
+        msg += to_bytes([move_byte])
 
-face_u = []
-face_f = []
-face_d = []
-face_b = []
-face_r = []
-face_l = []
-red_re = re.compile(r"(?<=R)\d*")
-green_re = re.compile(r"(?<=G)\d*")
-blue_re = re.compile(r"(?<=B)\d*")
-current_face = 255
+    msg += '\x00'
+    nxt_bt_msg = to_bytes([total_msg_len]) + msg
+    print repr(nxt_bt_msg)
+
+    try:
+        nxt.write(nxt_bt_msg)
+    except:
+        pass
+
 
 def get_scaned_colors(face):
     face_list = []
@@ -155,6 +177,118 @@ def get_scaned_colors(face):
         i += 1
 
     return face_list
+
+X1 = 0
+X2 = 1
+X3 = 2
+X4 = 3
+X5 = 4
+X6 = 5
+X7 = 6
+X8 = 7
+X9 = 8
+color_U = ""
+color_F = ""
+color_D = ""
+color_B = ""
+color_L = ""
+color_R = ""
+
+class myparser(HTMLParser):
+    def __init__(self):
+        HTMLParser.__init__(self)
+        self.data = ""
+
+    def handle_data(self, data):
+        data = data.strip("\r\n")
+        if len(data):
+            self.data = data
+
+    def get_data(self):
+        return self.data
+
+def generate_facelet_str(facelet):
+    str = ""
+    for face in facelet:
+        if face == color_U:
+            str += 'u'
+        elif face == color_F:
+            str += 'f'
+        elif face == color_D:
+            str += 'd'
+        elif face == color_B:
+            str += 'b'
+        elif face == color_L:
+            str += 'l'
+        elif face == color_R:
+            str += 'r'
+
+    return str
+
+def generate_nxt_moves(moves):
+    moves += 's'
+    moves = moves.replace(' ', 's')
+    moves = moves.replace('\'', 'n')
+
+    nxt_moves = []
+    nxt_byte = 0
+    for move in moves:
+        print move,
+        if move == 'U':
+            nxt_byte |= U << 2
+        elif move == 'F':
+            nxt_byte |= F << 2
+        elif move == 'D':
+            nxt_byte |= D << 2
+        elif move == 'B':
+            nxt_byte |= B << 2
+        elif move == 'R':
+            nxt_byte |= R << 2
+        elif move == 'L':
+            nxt_byte |= L << 2
+        elif move == '2':
+            nxt_byte |= TURN_180 << 1
+        elif move == 'n':
+            nxt_byte |= COUNTER_CLOCKWISE
+        elif move == 's':
+            nxt_moves.append(nxt_byte)
+            nxt_byte = 0
+
+    return nxt_moves
+
+def validate_and_solve(cube):
+    global color_U, color_F, color_D, color_B, color_L, color_R
+
+    U_colors = cube[0:9]
+    F_colors = cube[9:18]
+    D_colors = cube[18:27]
+    B_colors = cube[27:36]
+    L_colors = cube[36:45]
+    R_colors = cube[45:54]
+    color_U = U_colors[X5]
+    color_F = F_colors[X5]
+    color_D = D_colors[X5]
+    color_B = B_colors[X5]
+    color_L = L_colors[X5]
+    color_R = R_colors[X5]
+
+    url_str = "http://127.0.0.1:8081/?"
+    url_str += generate_facelet_str(U_colors)
+    url_str += generate_facelet_str(R_colors)
+    url_str += generate_facelet_str(F_colors)
+    url_str += generate_facelet_str(D_colors)
+    url_str += generate_facelet_str(L_colors)
+    url_str += generate_facelet_str(B_colors)
+    print url_str
+
+    cube = urllib2.urlopen(url_str)
+    cube_string = cube.read()
+    parser = myparser()
+    parser.feed(cube_string)
+    print repr(parser.get_data())
+    parser.close()
+
+    generate_nxt_moves(parser.get_data())
 
 def sample_color(android_bmp_data):
     global face_u, face_f, face_d, face_b, face_r, face_l
@@ -231,7 +365,7 @@ def sort_cube_colors():
     white_faces_final = []
     yellow_faces_final = []
     orange_faces_final = []
-    color_map = {}
+    global color_map
     for red in red_faces:
         if all_faces[red].getGreen() >= all_faces[red].getBlue():
             orange_faces_final.append(red)
@@ -296,9 +430,14 @@ def sort_cube_colors():
                 (green_t + blue_t > red_t):
             white_faces_final.append(white)
             color_map[white] = "W"
-        elif (rgb_max == green_t) and (red_t + blue_t < green_t):
+        elif (rgb_max == green_t) and \
+                (red_t + blue_t < green_t) and \
+                (2 * (blue_t + red_t) < green_t):
             green_faces_final.append(white)
             color_map[white] = "G"
+        else:
+            yellow_faces_final.append(white)
+            color_map[white] = "Y"
 
     print "red", sorted(red_faces_final)
     print "orange", sorted(orange_faces_final)
@@ -307,9 +446,13 @@ def sort_cube_colors():
     print "blue", sorted(blue_faces_final)
     print "white", sorted(white_faces_final)
 
+    cube = []
     sorted_color_map_keys = sorted(color_map.keys())
     for index in sorted_color_map_keys:
         print "face:", index, "color:", color_map[index]
+        cube.append(color_map[index])
+
+    validate_and_solve(cube)
 
 def process_data(fd, data):
     global android
@@ -368,11 +511,9 @@ def client_read(fd):
 
 def server_accept(server):
     global readfds
-    global temp
     client, address = server.accept()
     print "Connected by", address, client
     readfds.append(client)
-    temp = client
 
 def init_server():
     global readfds
@@ -414,16 +555,17 @@ if __name__ == "__main__":
                         dest = 'com')
     args = parser.parse_args()'''
 
-    serial = init_serial(3)
+    global nxt
+    nxt = init_serial(3)
     server = init_server()
 
     try:
-        while (1):
-            if (serial != None):
-                serial_read(serial)
+        while True:
+            if nxt != None:
+                serial_read(nxt)
 
             read_ready, write_ready, except_ready = \
-                    select.select(readfds, [], [], 1)
+                                select.select(readfds, [], [], 1)
             for sock in read_ready:
                 if sock == server:
                     server_accept(sock)
