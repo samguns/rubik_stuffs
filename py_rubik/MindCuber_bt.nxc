@@ -1985,9 +1985,50 @@ void calibrate_tilt() {
 }
 
 mutex      cube_mtx;
+mutex      scan_mtx;
 #define FACE_MASK       (7 << 2)
 #define TURN180_MASK    (1 << 1)
 #define CCW_MASK        (1)
+
+void scan_cube()
+{
+    string input;
+    string output;
+    int str_len = 0;
+    byte in_bytes[3];
+
+    while (true)
+    {
+        char ret;
+
+        for (int i = 0; i < 6; i++)
+        {
+            output = NumToStr(i);
+            SendRemoteString(0, 2, output);
+
+            Wait(4000);
+
+            if (i == 3)
+            {
+                turn(-1);
+                tilt();
+            }
+            else if (i == 4)
+            {
+                tilt(2);
+            }
+            else if (i != 5)
+            {
+                tilt();
+            }
+            tilt_release();
+        }
+
+        SendRemoteString(0, 2, "6");
+
+        break;
+    }
+}
 
 task bt_task()
 {
@@ -2093,7 +2134,12 @@ task main() {
     banner();
     TextOut(0*6, LCD_LINE4, "Scanning...");
 
+    Wait(500);
+    scan_cube();
+    
     Acquire(cube_mtx);
+    ClearLine(LCD_LINE4);
+    TextOut(0*6, LCD_LINE4, "Solving...");
     timer_start();
 
     for (int i = 0; i < solve_n; i++)

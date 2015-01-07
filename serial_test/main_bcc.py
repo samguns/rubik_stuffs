@@ -5,7 +5,7 @@ from serial import *
 
 ser = Serial()
 ser.port = 3
-ser.timeout = 20
+ser.timeout = 0
 
 try:
     ser.open()

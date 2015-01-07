@@ -14,7 +14,7 @@ from HTMLParser import HTMLParser
 
 readfds = []
 android = None
-nxt = None
+global nxt
 U = 0
 F = 1
 D = 2
@@ -23,6 +23,7 @@ R = 4
 L = 5
 TURN_180 = 1
 COUNTER_CLOCKWISE = 1
+current_face = 255
 
 face_u = []
 face_f = []
@@ -107,16 +108,6 @@ class rgb_object:
         self.lum = (rgb_max + rgb_min) / 2
         return
 
-def serial_read(ser):
-    text = ser.read(1)
-    if text:
-        n = ser.inWaiting()
-        if n:
-            text = text + ser.read(n)
-
-        print text[6:]
-
-
 def init_serial(com):
     ser = Serial()
     ser.port = com
@@ -131,13 +122,13 @@ def init_serial(com):
 
     return ser
 
-def nxt_write(msg_string):
+def nxt_write(msgs):
     msg = str('\x00\x80\x09\x05')
-    msg_len = len(msg_string) + 1
+    msg_len = len(msgs) + 1
     total_msg_len = msg_len + 4
     msg += to_bytes([msg_len])
 
-    for move_byte in msg_string:
+    for move_byte in msgs:
         msg += to_bytes([move_byte])
 
     msg += '\x00'
@@ -288,7 +279,8 @@ def validate_and_solve(cube):
     print repr(parser.get_data())
     parser.close()
 
-    generate_nxt_moves(parser.get_data())
+    moves = generate_nxt_moves(parser.get_data())
+    #nxt_write(moves)
 
 def sample_color(android_bmp_data):
     global face_u, face_f, face_d, face_b, face_r, face_l
@@ -452,42 +444,55 @@ def sort_cube_colors():
         print "face:", index, "color:", color_map[index]
         cube.append(color_map[index])
 
-    validate_and_solve(cube)
+    return cube
 
-def process_data(fd, data):
+def process_data(data):
     global android
-    global temp
     global face_u, face_f, face_d, face_b, face_r, face_l
     global current_face
 
-    if (fd != android):
-        if (data == "U"):
-            current_face = U
-            android.sendall("scan U\n")
-        elif (data == "F"):
-            current_face = F
-            android.sendall("scan F\n")
-        elif (data == "D"):
-            current_face = D
-            android.sendall("scan D\n")
-        elif (data == "B"):
-            current_face = B
-            android.sendall("scan B\n")
-        elif (data == "R"):
-            current_face = R
-            android.sendall("scan R\n")
-        elif (data == "L"):
-            current_face = L
-            android.sendall("scan L\n")
-        elif (data == "end"):
-            sort_cube_colors()
-            #solve_cube()
-            face_u = face_f = face_d = face_b = face_r = face_l = ""
-            current_face = 255
-            fd.sendall("Acknowledge!")
-    else:
-        sample_color(data)
-        temp.sendall("Roger that!")
+    sample_color(data)
+    nxt_write('ABCD')
+
+def process_nxt_data(rx_data):
+    global current_face
+    global android
+    global face_u, face_f, face_d, face_b, face_r, face_l
+
+    if (rx_data[0] == "3"):
+        current_face = U
+        android.sendall("scan U\n")
+    elif (rx_data[0] == "2"):
+        current_face = F
+        android.sendall("scan F\n")
+    elif (rx_data[0] == "1"):
+        current_face = D
+        android.sendall("scan D\n")
+    elif (rx_data[0] == "0"):
+        current_face = B
+        android.sendall("scan B\n")
+    elif (rx_data[0] == "4"):
+        current_face = R
+        android.sendall("scan R\n")
+    elif (rx_data[0] == "5"):
+        current_face = L
+        android.sendall("scan L\n")
+    elif (rx_data[0] == "6"):
+        print "End of scan"
+        cube = sort_cube_colors()
+        validate_and_solve(cube)
+        face_u = face_f = face_d = face_b = face_r = face_l = ""
+        current_face = 255
+
+def serial_read(ser):
+    text = ser.read(1)
+    if text:
+        n = ser.inWaiting()
+        if n:
+            text = text + ser.read(n)
+
+        print text[6:]
+        process_nxt_data(text[6:])
 
 def client_read(fd):
     global readfds
@@ -505,7 +510,7 @@ def client_read(fd):
             print "This is an android", android
             return
 
-        process_data(fd, data)
+        process_data(data)
 
     return
 
