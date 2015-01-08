@@ -2001,12 +2001,19 @@ void scan_cube()
     {
         char ret;
 
-        for (int i = 0; i < 6; i++)
+        for (int i = 0; i < 6;)
         {
+            char ret = 0;
             output = NumToStr(i);
             SendRemoteString(0, 2, output);
 
-            Wait(4000);
+loop:
+            ret = ReceiveRemoteString(5, true, input);
+            if (ret != 0)
+                goto loop;
+
+            if (input != "Ack")
+                goto loop;
 
             if (i == 3)
             {
@@ -2022,6 +2029,7 @@ void scan_cube()
                 tilt();
             }
             tilt_release();
+            i++;
         }
 
         SendRemoteString(0, 2, "6");
@@ -2030,12 +2038,10 @@ void scan_cube()
     }
 }
 
-task bt_task()
+int recv_moves()
 {
     string input;
     int str_len = 0;
-
-    Acquire(cube_mtx);
 
     solve_n = 0;
 
@@ -2047,6 +2053,9 @@ task bt_task()
         NumOut(0, LCD_LINE2, ret);
         if (ret != 0)
             continue;
+
+        if (input == "Fail")
+            return -1;
 
         str_len = strlen(input);
         NumOut(0, LCD_LINE3, str_len);
@@ -2077,15 +2086,14 @@ task bt_task()
             solve_n++;
         }
 
-        uc = U;
-        fc = L;
+        uc = L;
+        fc = D;
 
-        Release(cube_mtx);
-        Wait(1000);
+        //Wait(1000);
         break;
     }
 
-    //Release(cube_mtx);
+    return 0;
 }
 
 task main() {
@@ -2113,8 +2121,20 @@ task main() {
 
   byte msg_line = LCD_LINE7;
   while (true) {
-    start bt_task;
     ClearLine(msg_line);
+    TextOut(0*6, msg_line, "Remove cube...");
+    bool cal_white = false;
+    while (!cube_absent()) {
+      if (!cal_white && center_pressed()) {
+        msg_line = LCD_LINE7;
+        banner();
+        TextOut(0*6, LCD_LINE4, "Calibrate white");
+        TextOut(0*6, msg_line, "Remove cube...");
+        cal_white = true;
+      }
+      Wait(1);
+    }
+
 
     cube_detect_off();
     calibrate_tilt();
@@ -2132,14 +2152,30 @@ task main() {
     cube_detect_off();
 
     banner();
-    TextOut(0*6, LCD_LINE4, "Scanning...");
+    Wait(4000);
 
-    Wait(500);
-    scan_cube();
-    
-    Acquire(cube_mtx);
-    ClearLine(LCD_LINE4);
-    TextOut(0*6, LCD_LINE4, "Solving...");
+    /* Scan the cube at least three times if it can not be 
+        * recognized correctly.
+        */
+    int solved;
+    for (int i = 0; i < 3; i++)
+    {
+        TextOut(0*6, LCD_LINE4, "Scanning...");
+        scan_cube();
+
+        ClearLine(LCD_LINE4);
+        TextOut(0*6, LCD_LINE4, "Solving...");
+        solved = recv_moves();
+        if (solved == 0)
+            break;
+    }
+
+    if (solved == -1)
+    {
+        ClearLine(LCD_LINE4);
+        continue;
+    }
+
     timer_start();
 
     for (int i = 0; i < solve_n; i++)
@@ -2161,7 +2197,6 @@ task main() {
         manipulate(cube, fi, ri, rn);
     }
     timer_stop();
-    flash_green();
     banner();
     TextOut(0*6, LCD_LINE3, "Solved!");
     TextOut(0*6, LCD_LINE4, "Moves");
@@ -2171,13 +2206,9 @@ task main() {
 
     msg_line = LCD_LINE7;
 
-    //scan_away();
     tilt_away();
 
     turn(8);
-
-    Release(cube_mtx);
-    stop bt_task;
   }
 }
 

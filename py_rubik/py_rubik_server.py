@@ -276,11 +276,15 @@ def validate_and_solve(cube):
     cube_string = cube.read()
     parser = myparser()
     parser.feed(cube_string)
-    print repr(parser.get_data())
+    cube_explorer_returned = parser.get_data()
+    print cube_explorer_returned
     parser.close()
 
-    moves = generate_nxt_moves(parser.get_data())
-    #nxt_write(moves)
+    if cube_explorer_returned.find("Cube cannot be solved.") >= 0:
+        nxt_write("Fail")
+    else:
+        moves = generate_nxt_moves(cube_explorer_returned)
+        nxt_write(moves)
 
 def sample_color(android_bmp_data):
     global face_u, face_f, face_d, face_b, face_r, face_l
@@ -452,7 +456,7 @@ def process_data(data):
     global current_face
 
     sample_color(data)
-    nxt_write('ABCD')
+    nxt_write('Ack')
 
 def process_nxt_data(rx_data):
     global current_face
