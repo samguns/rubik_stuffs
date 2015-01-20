@@ -327,18 +327,20 @@ def sort_cube_colors():
     i = 0
     for items in all_faces:
         all_faces_hue_map.setdefault(items.getHue(), []).append(i)
+        '''
         print i, "r:", items.getRed(), "g:", items.getGreen(), "b:", items.getBlue(), \
                 "hue:", items.getHue(), "sat:", items.getSat(), "val:", items.getVal(), "lum:", items.getLum()
+        '''
         i += 1
 
     color_table = []
     sorted_hue_keys = sorted(all_faces_hue_map.keys(), reverse=True)
     for hue_key in sorted_hue_keys:
-        print hue_key,
+        #print hue_key,
         for items in all_faces_hue_map[hue_key]:
             color_table.append(items)
-            print items,
-        print " "
+            #print items,
+        #print " "
 
     red_faces = color_table[0:9]
     blue_faces = color_table[9:18]
@@ -445,7 +447,7 @@ def sort_cube_colors():
     cube = []
     sorted_color_map_keys = sorted(color_map.keys())
     for index in sorted_color_map_keys:
-        print "face:", index, "color:", color_map[index]
+        #print "face:", index, "color:", color_map[index]
         cube.append(color_map[index])
 
     return cube
