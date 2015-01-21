@@ -135,6 +135,13 @@ class Quaternion:
                        order='F')
         return mat.T.reshape(shape + (3, 3))
 
+White = pygame.Color(255, 255, 255, 220)
+Blue = pygame.Color(0, 0, 143, 220)
+Orange = pygame.Color(255, 111, 0, 220)
+Yellow = pygame.Color(255, 207, 0, 220)
+Green = pygame.Color(0, 159, 15, 220)
+Red = pygame.Color(207, 0, 0, 220)
+
 class Cube():
     face = np.array([[1, 1], [1, -1], [-1, -1], [-1, 1], [1, 1]])
     faces = np.array([np.hstack([face[:, :i],
@@ -143,8 +150,7 @@ class Cube():
                      [np.hstack([face[:, :i],
                                  -np.ones((5, 1)),
                                  face[:, i:]]) for i in range(3)])
-    stickercolors = [(255, 255, 255, 240), (0, 0, 143, 240), (255, 111, 0, 240),
-        (255, 207, 0, 240), (0, 159, 15, 240), (207, 0, 0, 240)]
+    stickercolors = [White, Blue, Orange, Yellow, Green, Red]
 
     def __init__(self, surface):
         self.start_rot = Quaternion.from_v_theta((1, -1, 0), -np.pi / 6)
@@ -217,11 +223,29 @@ class Cube():
         [self._cubes[i].set_xy(faces[i, :, :2]) for i in range(6)]
         [self._cubes[i].set_zorder(10 * zorder[i]) for i in range(6)]
 
+        zindex = {}
+        for i in range(6):
+            zindex[zorder[i]] = self._cubes[i]
+
+        for i in range(6):
+            point_list = zindex[i].get_xy().tolist()
+            polygon_list = []
+            for j in range(len(point_list)):
+                px = point_list[j][0]
+                py = point_list[j][1]
+                fact_x, fact_y = self.axes_to_position(px, py)
+                polygon_list.append((fact_x, fact_y))
+
+            pygame.gfxdraw.filled_polygon(self._surface, polygon_list, zindex[i].get_color())
+            #pygame.draw.polygon(self._surface, zindex[i].get_color(), polygon_list)
+            pygame.draw.aalines(surface, (50, 50, 50), False, polygon_list, 100)
+
+        '''
         for i in range(6):
             print "zorder ", i, " ", repr(zorder[i])
 
             point_list = self._cubes[zorder[i]].get_xy().tolist()
-            print point_list, len(point_list)
+            #print point_list, len(point_list)
             polygon_list = []
             for j in range(len(point_list)):
                 px = point_list[j][0]
@@ -230,10 +254,14 @@ class Cube():
                 polygon_list.append((fact_x, fact_y))
 
             #pygame.draw.lines(surface, (50, 50, 50, 100), False, polygon_list, 5)
-            #pygame.draw.aalines(surface, self._cubes[zorder[i]].get_color(), False, polygon_list, 10)
+            #pygame.draw.aalines(surface, (50, 50, 50), False, polygon_list, 30)
             #pygame.draw.polygon(self._surface, self._cubes[zorder[i]].get_color(), polygon_list)
             pygame.gfxdraw.filled_polygon(self._surface, polygon_list, self._cubes[zorder[i]].get_color())
+            pygame.draw.aalines(surface, (50, 50, 50), False, polygon_list, 50)
             #pygame.draw.lines(surface, (50, 50, 50, 200), False, polygon_list, 3)
+
+        print "####\n"
+        '''
 
     def rotate_left(self):
         self.current_rot = (self.current_rot
@@ -241,9 +269,15 @@ class Cube():
                                                       -self._step_LR))
         self.draw()
 
+    def rotate_right(self):
+        self.current_rot = (self.current_rot
+                            * Quaternion.from_v_theta(self._ax_LR,
+                                                      self._step_LR))
+        self.draw()
+
     def axes_to_position(self, x, y):
-        pos_x = 250 + (x * 150)
-        pos_y = 250 - (y * 150)
+        pos_x = 300 + (x * 300)
+        pos_y = 300 - (y * 300)
 
         return pos_x, pos_y
 
@@ -252,7 +286,7 @@ if __name__ == '__main__':
     screen = pygame.display.set_mode((800, 600), pygame.SRCALPHA, 32)
     pygame.display.set_caption('My PyGame Cube demo')
 
-    surface = pygame.Surface((500, 500)).convert_alpha()
+    surface = pygame.Surface((600, 600)).convert_alpha()
     c = Cube(surface)
     clock = pygame.time.Clock()
     screen.fill((128, 128, 128))
@@ -269,6 +303,14 @@ if __name__ == '__main__':
                 if event.type == pygame.KEYDOWN and \
                         event.key == pygame.K_SPACE:
                     c.rotate_left()
+
+                if event.type == pygame.KEYDOWN and \
+                        event.key == pygame.K_LEFT:
+                    c.rotate_left()
+
+                if event.type == pygame.KEYDOWN and \
+                        event.key == pygame.K_RIGHT:
+                    c.rotate_right()
 
             screen.blit(surface, surface.get_rect(center=(400, 300)))
             pygame.display.flip()
