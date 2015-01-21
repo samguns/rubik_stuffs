@@ -541,7 +541,7 @@ class InteractiveCube:
 
         self._draw_cube()
 
-    def rotate_demo(self):
+    def rotate_animation(self):
         rot1 = Quaternion.from_v_theta(self._ax_UD,
                                        self._step_UD * -0)
         rot2 = Quaternion.from_v_theta(self._ax_LR,
@@ -549,14 +549,7 @@ class InteractiveCube:
         self.rotate(rot1 * rot2)
         self._draw_cube()
 
-PLAYERDEAD = pygame.USEREVENT+2
-q = Queue()
-
-def thread_main(stop_event):
-    while not stop_event.is_set():
-        print "thread_main"
-        time.sleep(2)
-        q.put(True)
+from server_thread import server_thread
 
 if __name__ == '__main__':
     import sys
@@ -566,7 +559,7 @@ if __name__ == '__main__':
         N = 3
 
     t_stop = threading.Event()
-    t = Thread(target=thread_main, args=(t_stop, ))
+    t = Thread(target=server_thread, args=(t_stop, ))
     t.daemon = True
     t.start()
 
@@ -587,15 +580,7 @@ if __name__ == '__main__':
     while running is True:
         screen.fill((128, 128, 128), surface.get_rect(center=(400, 300)))
         clock.tick(60)
-        ic.rotate_demo()
-
-        try:
-            item = q.get(False)
-            if item == True:
-                face_turning = True
-                q.task_done()
-        except:
-            pass
+        ic.rotate_animation()
 
         if face_turning == True:
             ic.rotate_face('U', steps)
