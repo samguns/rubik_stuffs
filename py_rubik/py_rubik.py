@@ -7,7 +7,6 @@ import pygame
 import pygame.gfxdraw
 import time
 import threading
-from Queue import Queue
 from threading import Thread
 
 class Quaternion:
@@ -404,8 +403,8 @@ class InteractiveCube:
         return project_points(pts, self._current_rot, self._view, [0, 1, 0])
 
     def axes_to_position(self, x, y):
-        pos_x = 300 + (x * 130)
-        pos_y = 300 - (y * 130)
+        pos_x = 300 + (x * 120)
+        pos_y = 300 - (y * 120)
 
         return pos_x, pos_y
 
@@ -445,39 +444,26 @@ class InteractiveCube:
                 self._sticker_polys[i].set_zorder(sticker_zorders[i])
                 self._sticker_polys[i].set_color(colors[i])
 
-        plastic_zindex = {}
-        sticker_zindex = {}
+        zindex = {}
         for i in range(len(colors)):
-            plastic_zindex.setdefault(face_zorders[i], []).append(self._face_polys[i])
-            sticker_zindex.setdefault(sticker_zorders[i], []).append(self._sticker_polys[i])
+            zindex.setdefault(face_zorders[i], []).append(self._face_polys[i])
+            zindex.setdefault(sticker_zorders[i], []).append(self._sticker_polys[i])
 
-        for plastic_zindex_key in plastic_zindex.keys():
-            for plastic in plastic_zindex[plastic_zindex_key]:
-                plastic_point_list = plastic.get_xy().tolist()
-                plastic_polygon_list = []
+        for zindex_key in sorted(zindex.keys()):
+            for shape in zindex[zindex_key]:
+                point_list = shape.get_xy().tolist()
+                polygon_list = []
 
-                for j in range(len(plastic_point_list)):
-                    px = plastic_point_list[j][0]
-                    py = plastic_point_list[j][1]
+                for j in range(len(point_list)):
+                    px = point_list[j][0]
+                    py = point_list[j][1]
                     fact_x, fact_y = self.axes_to_position(px, py)
-                    plastic_polygon_list.append((fact_x, fact_y))
+                    polygon_list.append((fact_x, fact_y))
 
-                #pygame.gfxdraw.filled_polygon(self._surface, plastic_polygon_list, plastic.get_color())
-                pygame.draw.polygon(self._surface, plastic.get_color(), plastic_point_list, 10)
-                #pygame.draw.aalines(surface, plastic.get_color(), True, plastic_polygon_list, 100)
+                pygame.gfxdraw.filled_polygon(self._surface, polygon_list, shape.get_color())
+                #pygame.gfxdraw.aapolygon(self._surface, polygon_list, shape.get_color())
+                #pygame.draw.polygon(surface, shape.get_color(), polygon_list, 0)
 
-        for sticker_zindex_key in sorted(sticker_zindex.keys()):
-            for sticker in sticker_zindex[sticker_zindex_key]:
-                sticker_point_list = sticker.get_xy().tolist()
-                sticker_polygon_list = []
-
-                for j in range(len(sticker_point_list)):
-                    px = sticker_point_list[j][0]
-                    py = sticker_point_list[j][1]
-                    fact_x, fact_y = self.axes_to_position(px, py)
-                    sticker_polygon_list.append((fact_x, fact_y))
-
-                pygame.gfxdraw.filled_polygon(self._surface, sticker_polygon_list, sticker.get_color())
 
     def rotate(self, rot):
         self._current_rot = self._current_rot * rot
@@ -503,41 +489,28 @@ class InteractiveCube:
 
     def _key_press(self, event):
         """Handler for key press events"""
-        if event.key == 'shift':
+        if event.key == pygame.KMOD_SHIFT:
             self._shift = True
-        elif event.key.isdigit():
-            self._digit_flags[int(event.key)] = 1
-        elif event.key == 'right':
+        elif event.key == pygame.K_RIGHT:
             if self._shift:
                 ax_LR = self._ax_LR_alt
             else:
                 ax_LR = self._ax_LR
             self.rotate(Quaternion.from_v_theta(ax_LR,
                                                 5 * self._step_LR))
-        elif event.key == 'left':
+        elif event.key == pygame.K_LEFT:
             if self._shift:
                 ax_LR = self._ax_LR_alt
             else:
                 ax_LR = self._ax_LR
             self.rotate(Quaternion.from_v_theta(ax_LR,
                                                 -5 * self._step_LR))
-        elif event.key == 'up':
+        elif event.key == pygame.K_UP:
             self.rotate(Quaternion.from_v_theta(self._ax_UD,
                                                 5 * self._step_UD))
-        elif event.key == 'down':
+        elif event.key == pygame.K_DOWN:
             self.rotate(Quaternion.from_v_theta(self._ax_UD,
                                                 -5 * self._step_UD))
-        elif event.key.upper() in 'LRUDBF':
-            if self._shift:
-                direction = -1
-            else:
-                direction = 1
-
-            if np.any(self._digit_flags[:N]):
-                for d in np.arange(N)[self._digit_flags[:N]]:
-                    self.rotate_face(event.key.upper(), direction, layer=d)
-            else:
-                self.rotate_face(event.key.upper(), direction)
 
         self._draw_cube()
 
@@ -545,11 +518,41 @@ class InteractiveCube:
         rot1 = Quaternion.from_v_theta(self._ax_UD,
                                        self._step_UD * -0)
         rot2 = Quaternion.from_v_theta(self._ax_LR,
-                                       self._step_LR * -0.3)
+                                       self._step_LR * -0.9)
         self.rotate(rot1 * rot2)
         self._draw_cube()
 
+    def change_face_color(self, face, color):
+        self.cube._colors[face] = color
+
 from server_thread import server_thread
+
+MOVE_CUBE = pygame.USEREVENT + 1
+CHANGE_COLOR = pygame.USEREVENT + 2
+
+def temp_thread(stop_event):
+    i = 0
+    while not stop_event.is_set():
+        time.sleep(2)
+        message = 'N'
+        if i is 0:
+            message = 'U'
+        elif i is 1:
+            message = 'F'
+        elif i is 2:
+            message = 'D'
+        elif i is 3:
+            message = 'B'
+        elif i is 4:
+            message = 'L'
+        elif i is 5:
+            message = 'R'
+        event = pygame.event.Event(MOVE_CUBE, move=message)
+        pygame.event.post(event)
+
+        i += 1
+        if i is 6:
+            i = 0
 
 if __name__ == '__main__':
     import sys
@@ -559,9 +562,9 @@ if __name__ == '__main__':
         N = 3
 
     t_stop = threading.Event()
-    t = Thread(target=server_thread, args=(t_stop, ))
+    t = Thread(target=temp_thread, args=(t_stop, ))
     t.daemon = True
-    t.start()
+    #t.start()
 
     pygame.init()
     screen = pygame.display.set_mode((800, 600))
@@ -577,13 +580,82 @@ if __name__ == '__main__':
     face_turning = False
     steps = 40
     counter = 0
+    move = None
+
+    U_cube_color_map = dict()
+    # U = 0
+    U_cube_color_map[0] = 0
+    U_cube_color_map[1] = 1
+    U_cube_color_map[2] = 2
+    U_cube_color_map[3] = 3
+    U_cube_color_map[4] = 4
+    U_cube_color_map[5] = 5
+    U_cube_color_map[6] = 6
+    U_cube_color_map[7] = 7
+    U_cube_color_map[8] = 8
+
+    D_cube_color_map = dict()
+    D_cube_color_map[0] = 7
+    D_cube_color_map[1] = 8
+    D_cube_color_map[2] = 9
+    D_cube_color_map[3] = 4
+    D_cube_color_map[4] = 5
+    D_cube_color_map[5] = 6
+    D_cube_color_map[6] = 1
+    D_cube_color_map[7] = 2
+    D_cube_color_map[8] = 3
+
+    L_cube_color_map = dict()
+    L_cube_color_map[0] = 6
+    L_cube_color_map[1] = 3
+    L_cube_color_map[2] = 0
+    L_cube_color_map[3] = 7
+    L_cube_color_map[4] = 4
+    L_cube_color_map[5] = 1
+    L_cube_color_map[6] = 8
+    L_cube_color_map[7] = 5
+    L_cube_color_map[8] = 2
+
+    R_cube_color_map = dict()
+    R_cube_color_map[0] = 8
+    R_cube_color_map[1] = 5
+    R_cube_color_map[2] = 2
+    R_cube_color_map[3] = 7
+    R_cube_color_map[4] = 4
+    R_cube_color_map[5] = 1
+    R_cube_color_map[6] = 6
+    R_cube_color_map[7] = 3
+    R_cube_color_map[8] = 0
+
+    B_cube_color_map = dict()
+    B_cube_color_map[0] = 7
+    B_cube_color_map[1] = 6
+    B_cube_color_map[2] = 4
+    B_cube_color_map[3] = 3
+    B_cube_color_map[4] = 1
+    B_cube_color_map[5] = 0
+    B_cube_color_map[6] = 8
+    B_cube_color_map[7] = 5
+    B_cube_color_map[8] = 2
+
+    F_cube_color_map = dict()
+    F_cube_color_map[0] = 8
+    F_cube_color_map[1] = 5
+    F_cube_color_map[2] = 2
+    F_cube_color_map[3] = 7
+    F_cube_color_map[4] = 4
+    F_cube_color_map[5] = 1
+    F_cube_color_map[6] = 6
+    F_cube_color_map[7] = 3
+    F_cube_color_map[8] = 0
+
     while running is True:
         screen.fill((128, 128, 128), surface.get_rect(center=(400, 300)))
         clock.tick(60)
-        ic.rotate_animation()
+        #ic.rotate_animation()
 
-        if face_turning == True:
-            ic.rotate_face('U', steps)
+        if face_turning is True:
+            ic.rotate_face(move, steps)
             counter += 1
             if counter == steps:
                 counter = 0
@@ -594,10 +666,18 @@ if __name__ == '__main__':
                 running = False
                 t_stop.set()
 
-            if face_turning == False:
+            if event.type == MOVE_CUBE:
+                move = event.move
+                face_turning = True
+
+            if event.type == pygame.KEYDOWN:
+                ic._key_press(event)
+
+            if face_turning is False:
                 if event.type == pygame.KEYDOWN and \
                     event.key == pygame.K_u:
                     face_turning = True
+                    move = 'U'
 
             if event.type == pygame.KEYDOWN and \
                     event.key == pygame.K_SPACE:
@@ -606,4 +686,4 @@ if __name__ == '__main__':
         screen.blit(surface, surface.get_rect(center=(400, 300)))
         pygame.display.flip()
 
-    t.join()
+    #t.join()
